@@ -1,6 +1,6 @@
 {
   "name": "create-cloudinary-react-vite",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0",
   "description": "Scaffold a Cloudinary React + Vite + TypeScript project with interactive setup",
   "type": "module",
   "bin": {
