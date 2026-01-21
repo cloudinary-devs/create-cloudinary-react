@@ -1,0 +1,45 @@
+name: Publish Package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify admin permissions
+        run: |
+          # Check if the actor is a repository admin
+          PERMISSION=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/collaborators/${{ github.actor }}/permission" \
+            | grep -o '"permission":"[^"]*"' | cut -d'"' -f4)
+          
+          if [ "$PERMISSION" != "admin" ]; then
+            echo "Error: Only repository admins can trigger publishing. Current permission: $PERMISSION"
+            exit 1
+          fi
+          
+          echo "✓ Verified admin permission for ${{ github.actor }}"
+
+      - uses: actions/checkout@v4
+
+      - name: Display version to publish
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Publishing version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_ENV
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+
+      - run: npm test --if-present
+
+      - run: npm publish
