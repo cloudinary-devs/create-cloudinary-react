@@ -1,3 +1,10 @@
+# [1.0.0-beta.3](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2026-01-27)
+
+
+### Bug Fixes
+
+* clarify that new versions are published to npm on release ([e6bf007](https://github.com/cloudinary-devs/create-cloudinary-react/commit/e6bf007601ce3da1edde1c0e5eb1ee089bbffae4))
+
 # [1.0.0-beta.2](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2026-01-27)
 
 
