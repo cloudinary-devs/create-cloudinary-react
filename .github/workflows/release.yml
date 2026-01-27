@@ -86,43 +86,35 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Ensure v1.0.0-beta.1 points to a commit in main history
+      - name: Prepare v1.0.0-beta.1 for semantic-release (real run only)
+        if: github.event.inputs.dry_run != 'true'
         run: |
           set -e
-          # semantic-release uses "git tag --merged main"; the tag must point to a commit in main's history.
-          # Always move the tag to the 1.0.0-beta.1 release commit so it is visible to semantic-release.
+          # semantic-release uses "git tag --merged main" and git notes; tag must be in main history and have note.
           if ! git rev-parse --verify v1.0.0-beta.1 >/dev/null 2>&1; then exit 0; fi
           RELEASE_COMMIT=$(git log main -1 --format=%H --grep="chore(release): 1.0.0-beta.1" 2>/dev/null || true)
           if [ -z "$RELEASE_COMMIT" ]; then
             RELEASE_COMMIT=$(git merge-base main origin/master 2>/dev/null || git rev-parse HEAD~1)
           fi
           CURRENT=$(git rev-parse v1.0.0-beta.1)
-          if [ "$CURRENT" = "$RELEASE_COMMIT" ]; then
-            echo "v1.0.0-beta.1 already points to $RELEASE_COMMIT."
-            exit 0
-          fi
-          git tag -d v1.0.0-beta.1 2>/dev/null || true
-          git tag -a v1.0.0-beta.1 "$RELEASE_COMMIT" -m "chore: 1.0.0-beta.1"
-          if [ "${{ github.event.inputs.dry_run }}" != "true" ]; then
+          if [ "$CURRENT" != "$RELEASE_COMMIT" ]; then
+            git tag -d v1.0.0-beta.1 2>/dev/null || true
+            git tag -a v1.0.0-beta.1 "$RELEASE_COMMIT" -m "chore: 1.0.0-beta.1"
             git push origin v1.0.0-beta.1 --force
+            echo "Moved v1.0.0-beta.1 from $CURRENT to $RELEASE_COMMIT."
           fi
-          echo "Moved v1.0.0-beta.1 from $CURRENT to $RELEASE_COMMIT."
+          git notes --ref semantic-release-v1.0.0-beta.1 add -f -m '{"channels":["beta"]}' v1.0.0-beta.1
+          git push origin refs/notes/semantic-release-v1.0.0-beta.1
+          echo "Tag and note pushed; re-fetching so semantic-release sees them."
+          git fetch origin '+refs/tags/*:refs/tags/*' '+refs/notes/*:refs/notes/*'
 
-      - name: Add semantic-release note to v1.0.0-beta.1 if missing
+      - name: Add semantic-release note (dry run only)
+        if: github.event.inputs.dry_run == 'true'
         run: |
           set -e
-          # Existing v1.0.0-beta.1 tag has no git note, so semantic-release ignores it and tries to re-release it.
-          # Add the note so it is treated as last release and the next version is 1.0.0-beta.2.
-          if ! git rev-parse --verify v1.0.0-beta.1 >/dev/null 2>&1; then
-            echo "Tag v1.0.0-beta.1 not found, skipping note step."
-            exit 0
-          fi
-          # Always ensure the note exists (-f overwrites); required for get-last-release to see this tag on main.
+          if ! git rev-parse --verify v1.0.0-beta.1 >/dev/null 2>&1; then exit 0; fi
           git notes --ref semantic-release-v1.0.0-beta.1 add -f -m '{"channels":["beta"]}' v1.0.0-beta.1
-          if [ "${{ github.event.inputs.dry_run }}" != "true" ]; then
-            git push origin refs/notes/semantic-release-v1.0.0-beta.1
-          fi
-          echo "Added semantic-release note to v1.0.0-beta.1"
+          echo "Added semantic-release note to v1.0.0-beta.1 (local only for dry run)."
 
       - name: Create initial tag if needed
         if: github.event.inputs.dry_run != 'true'
