@@ -86,28 +86,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Prepare v1.0.0-beta.1 for semantic-release (real run only)
-        if: github.event.inputs.dry_run != 'true'
-        run: |
-          set -e
-          # semantic-release uses "git tag --merged main" and git notes; tag must be in main history and have note.
-          if ! git rev-parse --verify v1.0.0-beta.1 >/dev/null 2>&1; then exit 0; fi
-          RELEASE_COMMIT=$(git log main -1 --format=%H --grep="chore(release): 1.0.0-beta.1" 2>/dev/null || true)
-          if [ -z "$RELEASE_COMMIT" ]; then
-            RELEASE_COMMIT=$(git merge-base main origin/master 2>/dev/null || git rev-parse HEAD~1)
-          fi
-          CURRENT=$(git rev-parse v1.0.0-beta.1)
-          if [ "$CURRENT" != "$RELEASE_COMMIT" ]; then
-            git tag -d v1.0.0-beta.1 2>/dev/null || true
-            git tag -a v1.0.0-beta.1 "$RELEASE_COMMIT" -m "chore: 1.0.0-beta.1"
-            git push origin v1.0.0-beta.1 --force
-            echo "Moved v1.0.0-beta.1 from $CURRENT to $RELEASE_COMMIT."
-          fi
-          git notes --ref semantic-release-v1.0.0-beta.1 add -f -m '{"channels":["beta"]}' v1.0.0-beta.1
-          git push origin refs/notes/semantic-release-v1.0.0-beta.1
-          echo "Tag and note pushed; re-fetching so semantic-release sees them."
-          git fetch origin '+refs/tags/*:refs/tags/*' '+refs/notes/*:refs/notes/*'
-
       - name: Add semantic-release note (dry run only)
         if: github.event.inputs.dry_run == 'true'
         run: |
@@ -161,13 +139,31 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
+          set -e
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             echo "Running semantic-release in DRY RUN mode..."
             npx semantic-release --dry-run 2>&1 | tee semantic-release.log || true
-            # Extract "The next release version is X" for use in summary step
             grep -oE "The next release version is [^[:space:]]+" semantic-release.log 2>/dev/null | sed 's/The next release version is //' > next-version.txt || echo "" > next-version.txt
           else
-            echo "Running semantic-release (REAL release)..."
+            # Prepare v1.0.0-beta.1 IN THIS SAME STEP so semantic-release sees it as last release (avoids "tag already exists").
+            # semantic-release uses "git tag --merged main" and git notes; tag must be in main history and have note.
+            if git rev-parse --verify v1.0.0-beta.1 >/dev/null 2>&1; then
+              RELEASE_COMMIT=$(git log main -1 --format=%H --grep="chore(release): 1.0.0-beta.1" 2>/dev/null || true)
+              if [ -z "$RELEASE_COMMIT" ]; then
+                RELEASE_COMMIT=$(git merge-base main origin/master 2>/dev/null || git rev-parse HEAD~1)
+              fi
+              CURRENT=$(git rev-parse v1.0.0-beta.1)
+              if [ "$CURRENT" != "$RELEASE_COMMIT" ]; then
+                git tag -d v1.0.0-beta.1 2>/dev/null || true
+                git tag -a v1.0.0-beta.1 "$RELEASE_COMMIT" -m "chore: 1.0.0-beta.1"
+                git push origin v1.0.0-beta.1 --force
+                echo "Moved v1.0.0-beta.1 from $CURRENT to $RELEASE_COMMIT."
+              fi
+              git notes --ref semantic-release-v1.0.0-beta.1 add -f -m '{"channels":["beta"]}' v1.0.0-beta.1
+              git push origin refs/notes/semantic-release-v1.0.0-beta.1
+              git fetch origin '+refs/tags/*:refs/tags/*' '+refs/notes/*:refs/notes/*'
+              echo "Prepared v1.0.0-beta.1; running semantic-release..."
+            fi
             npx semantic-release
           fi
 
