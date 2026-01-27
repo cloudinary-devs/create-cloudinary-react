@@ -97,68 +97,56 @@ jobs:
           echo "=== Git tags ==="
           git tag
 
-      - name: Configure npm authentication for semantic-release
+      - name: Extract npm token from .npmrc
         run: |
-          echo "=== NPM Authentication Setup ==="
+          echo "=== Extracting npm token ==="
           echo "NPM_CONFIG_USERCONFIG: $NPM_CONFIG_USERCONFIG"
-          echo "NODE_AUTH_TOKEN is set: $([ -n "$NODE_AUTH_TOKEN" ] && echo 'yes' || echo 'no')"
           
-          # Check if .npmrc exists in temp location
+          # Copy .npmrc to home directory first
           if [ -f "$NPM_CONFIG_USERCONFIG" ]; then
-            echo "✓ Found .npmrc at $NPM_CONFIG_USERCONFIG"
-            # Show first line only (without token) for debugging
-            head -1 "$NPM_CONFIG_USERCONFIG" | sed 's/=.*/=***/' || true
-            
-            # Copy to home directory
             mkdir -p ~/.npm
             cp "$NPM_CONFIG_USERCONFIG" ~/.npmrc
             echo "✓ Copied .npmrc to ~/.npmrc"
             
-            # Extract token - try multiple patterns
-            TOKEN=""
-            # Pattern 1: //registry.npmjs.org/:_authToken=TOKEN
-            TOKEN=$(grep -oP '(?<=//registry\.npmjs\.org/:_authToken=).*' ~/.npmrc 2>/dev/null || echo "")
-            # Pattern 2: _authToken=TOKEN (without registry prefix)
-            if [ -z "$TOKEN" ]; then
-              TOKEN=$(grep -oP '(?<=_authToken=).*' ~/.npmrc 2>/dev/null | head -1 || echo "")
-            fi
-            # Pattern 3: Check if it's using NODE_AUTH_TOKEN variable
-            if [ -z "$TOKEN" ] && [ -n "$NODE_AUTH_TOKEN" ]; then
-              TOKEN="$NODE_AUTH_TOKEN"
-              echo "Using NODE_AUTH_TOKEN directly"
+            # Show .npmrc format (masked) for debugging
+            echo "Contents of .npmrc (masked):"
+            cat ~/.npmrc | sed 's/=.*/=***/' || true
+            echo ""
+            
+            # Extract token - the format should be: //registry.npmjs.org/:_authToken=TOKEN
+            NPM_TOKEN=$(awk -F'=' '/_authToken/ {print $2}' ~/.npmrc | head -1 | tr -d '\n' || echo "")
+            
+            # If that didn't work, try grep
+            if [ -z "$NPM_TOKEN" ]; then
+              NPM_TOKEN=$(grep -oP '(?<=_authToken=).*' ~/.npmrc | head -1 | tr -d '\n' || echo "")
             fi
             
-            if [ -n "$TOKEN" ]; then
-              # Mask token in logs
-              echo "::add-mask::$TOKEN"
-              echo "NPM_TOKEN=$TOKEN" >> $GITHUB_ENV
-              echo "✓ NPM_TOKEN configured (masked in logs)"
+            # If still empty, try without regex (simple sed)
+            if [ -z "$NPM_TOKEN" ]; then
+              NPM_TOKEN=$(grep '_authToken' ~/.npmrc | sed 's/.*_authToken=//' | tr -d '\n' || echo "")
+            fi
+            
+            if [ -n "$NPM_TOKEN" ]; then
+              echo "::add-mask::$NPM_TOKEN"
+              echo "NPM_TOKEN=$NPM_TOKEN" >> $GITHUB_ENV
+              echo "✓ NPM_TOKEN extracted and set"
             else
-              echo "✗ Warning: Could not extract token from .npmrc"
-              echo "Contents of ~/.npmrc (first 3 lines, tokens masked):"
-              head -3 ~/.npmrc | sed 's/=.*/=***/' || true
+              echo "✗ Error: Could not extract token from .npmrc"
+              echo "Full .npmrc content (tokens will be masked in actual output):"
+              cat ~/.npmrc || true
+              exit 1
             fi
           else
-            echo "✗ Warning: NPM_CONFIG_USERCONFIG file not found"
-            echo "Trying to use NODE_AUTH_TOKEN directly..."
-            if [ -n "$NODE_AUTH_TOKEN" ]; then
-              echo "::add-mask::$NODE_AUTH_TOKEN"
-              echo "NPM_TOKEN=$NODE_AUTH_TOKEN" >> $GITHUB_ENV
-              echo "✓ NPM_TOKEN set from NODE_AUTH_TOKEN"
-            else
-              echo "✗ Error: No npm authentication found"
-            fi
+            echo "✗ Error: .npmrc file not found at $NPM_CONFIG_USERCONFIG"
+            echo "This means actions/setup-node did not create the .npmrc file"
+            echo "NODE_AUTH_TOKEN is set: $([ -n "$NODE_AUTH_TOKEN" ] && echo 'yes' || echo 'no')"
+            exit 1
           fi
           
-          # Test npm auth
+          # Test authentication
           echo ""
           echo "=== Testing npm authentication ==="
-          if npm whoami --registry=https://registry.npmjs.org 2>/dev/null; then
-            echo "✓ npm authentication successful"
-          else
-            echo "✗ npm authentication failed"
-            echo "This might be OK if using OIDC - semantic-release will verify"
-          fi
+          npm whoami --registry=https://registry.npmjs.org && echo "✓ npm authentication successful" || echo "✗ npm authentication failed"
 
       - name: Release
         env:
