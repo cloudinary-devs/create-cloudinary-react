@@ -100,23 +100,33 @@ jobs:
       - name: Configure npm authentication for semantic-release
         run: |
           # actions/setup-node creates .npmrc in a temp location
-          # We need to copy it or create one that semantic-release can use
+          # We need to ensure semantic-release can find it
           if [ -f "$NPM_CONFIG_USERCONFIG" ]; then
-            echo "Found npmrc at $NPM_CONFIG_USERCONFIG"
+            echo "=== Found npmrc at $NPM_CONFIG_USERCONFIG ==="
             cat "$NPM_CONFIG_USERCONFIG"
             # Copy to home directory for semantic-release
-            cp "$NPM_CONFIG_USERCONFIG" ~/.npmrc || true
+            mkdir -p ~/.npm
+            cp "$NPM_CONFIG_USERCONFIG" ~/.npmrc
+            echo "Copied .npmrc to ~/.npmrc"
+          else
+            echo "Warning: NPM_CONFIG_USERCONFIG not found at $NPM_CONFIG_USERCONFIG"
           fi
           
-          # Also set NPM_TOKEN from NODE_AUTH_TOKEN if available
-          if [ -n "$NODE_AUTH_TOKEN" ]; then
-            echo "NPM_TOKEN=$NODE_AUTH_TOKEN" >> $GITHUB_ENV
-            echo "NPM_TOKEN set from NODE_AUTH_TOKEN"
+          # Extract token from .npmrc and set as NPM_TOKEN for semantic-release
+          if [ -f ~/.npmrc ]; then
+            # Extract the token from the .npmrc file
+            TOKEN=$(grep -oP '(?<=//registry\.npmjs\.org/:_authToken=).*' ~/.npmrc || echo "")
+            if [ -n "$TOKEN" ]; then
+              echo "NPM_TOKEN=$TOKEN" >> $GITHUB_ENV
+              echo "NPM_TOKEN extracted from .npmrc and set"
+            else
+              echo "Warning: Could not extract token from .npmrc"
+            fi
           fi
           
           # Test npm auth
           echo "=== Testing npm authentication ==="
-          npm whoami --registry=https://registry.npmjs.org || echo "npm whoami failed (this is OK if using OIDC)"
+          npm whoami --registry=https://registry.npmjs.org || echo "npm whoami failed"
 
       - name: Release
         env:
