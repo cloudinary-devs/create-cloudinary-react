@@ -138,16 +138,20 @@ jobs:
             npx semantic-release
           fi
 
+      # npm publish uses OIDC (id-token: write + --provenance). No NPM_TOKEN needed.
+      # Require on npmjs.com: Package → Package settings → Trusted publishers →
+      #   Add: GitHub Actions, org cloudinary-devs, repo create-cloudinary-react, workflow release.yml
+      # Unset token env vars so npm uses OIDC only; stale NPM_TOKEN/NODE_AUTH_TOKEN causes "Access token expired".
       - name: Publish to npm using trusted publishing
         if: github.event.inputs.dry_run != 'true'
+        env:
+          NODE_AUTH_TOKEN: ''
+          NPM_TOKEN: ''
         run: |
           echo "=== Publishing to npm with trusted publishing (OIDC) ==="
-          
-          # Ensure .npmrc is available (setup-node should have created it)
-          if [ -f "$NPM_CONFIG_USERCONFIG" ]; then
-            cp "$NPM_CONFIG_USERCONFIG" ~/.npmrc
-            echo "✓ Using .npmrc for authentication"
-          fi
+          unset NODE_AUTH_TOKEN NPM_TOKEN 2>/dev/null || true
+          # Use minimal .npmrc so npm uses OIDC, not a stale token from setup-node
+          echo "registry=https://registry.npmjs.org/" > ~/.npmrc
           
           # Get versions
           VERSION_BEFORE="${{ steps.version-before.outputs.version }}"
