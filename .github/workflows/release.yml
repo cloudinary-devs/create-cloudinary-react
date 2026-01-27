@@ -66,6 +66,16 @@ jobs:
 
       - run: npm test --if-present
 
+      - name: Create initial tag if needed
+        run: |
+          if ! git rev-parse --verify "v1.0.0-beta.1" >/dev/null 2>&1; then
+            echo "Creating initial tag v1.0.0-beta.1"
+            git tag -a "v1.0.0-beta.1" -m "chore: initial beta release"
+            git push origin "v1.0.0-beta.1" || echo "Tag push failed (may not have permission or tag exists)"
+          else
+            echo "Tag v1.0.0-beta.1 already exists"
+          fi
+
       - name: Debug semantic-release config
         run: |
           echo "=== .releaserc.json ==="
