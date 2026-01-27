@@ -66,6 +66,20 @@ jobs:
 
       - run: npm test --if-present
 
+      - name: Debug semantic-release config
+        run: |
+          echo "=== .releaserc.json ==="
+          cat .releaserc.json
+          echo ""
+          echo "=== Git branches ==="
+          git branch -a
+          echo ""
+          echo "=== Current branch ==="
+          git branch --show-current
+          echo ""
+          echo "=== Git tags ==="
+          git tag
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
