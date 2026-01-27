@@ -53,7 +53,11 @@ These rules help AI assistants understand Cloudinary React SDK patterns, common 
 
 ## Development
 
-This project uses [Conventional Commits](https://www.conventionalcommits.org/) for version management.
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for version management and [semantic-release](https://github.com/semantic-release/semantic-release) for automated releases.
+
+### Release Process
+
+Releases are triggered manually via GitHub Actions workflow. The workflow uses npm trusted publishing (OIDC) for secure package publishing.
 
 ### Commit Format
 
