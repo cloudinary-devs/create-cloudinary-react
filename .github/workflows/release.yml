@@ -97,6 +97,13 @@ jobs:
           echo "=== Git tags ==="
           git tag
 
+      - name: Get version before semantic-release
+        id: version-before
+        run: |
+          VERSION_BEFORE=$(node -p "require('./package.json').version")
+          echo "version=$VERSION_BEFORE" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION_BEFORE"
+
       - name: Release with semantic-release
         id: release
         env:
@@ -113,18 +120,22 @@ jobs:
             echo "✓ Using .npmrc for authentication"
           fi
           
-          # Get version from package.json (updated by semantic-release)
-          VERSION=$(node -p "require('./package.json').version")
-          CURRENT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+          # Get versions
+          VERSION_BEFORE="${{ steps.version-before.outputs.version }}"
+          VERSION_AFTER=$(node -p "require('./package.json').version")
+          
+          echo "Version before: $VERSION_BEFORE"
+          echo "Version after: $VERSION_AFTER"
           
           # Only publish if semantic-release created a new version
-          if [ -n "$CURRENT_TAG" ]; then
-            echo "New release detected: $CURRENT_TAG"
-            echo "Publishing version: $VERSION"
+          if [ "$VERSION_BEFORE" != "$VERSION_AFTER" ]; then
+            echo "✓ New version detected: $VERSION_AFTER"
+            echo "Publishing to npm..."
             
             # Publish using npm publish which supports OIDC/trusted publishing
             npm publish --provenance --access public
-            echo "✓ Published $VERSION to npm"
+            echo "✓ Published $VERSION_AFTER to npm"
           else
-            echo "No new release created, skipping npm publish"
+            echo "No version change detected (version: $VERSION_AFTER)"
+            echo "Skipping npm publish - no new release was created"
           fi
