@@ -45,11 +45,17 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Setup git branch
+        run: |
+          git checkout -B main
+          git branch --set-upstream-to=origin/main main
+
       - name: Debug branch info
         run: |
           echo "Current branch: $(git branch --show-current)"
           echo "All branches: $(git branch -a)"
           echo "Git remote: $(git remote -v)"
+          echo "Git status: $(git status)"
 
       - uses: actions/setup-node@v4
         with:
