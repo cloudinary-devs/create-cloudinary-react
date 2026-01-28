@@ -1,3 +1,11 @@
+# [1.0.0-beta.8](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-01-28)
+
+
+### Bug Fixes
+
+* publish to latest tag so installers get most recent version ([d907c93](https://github.com/cloudinary-devs/create-cloudinary-react/commit/d907c933a1d0cd7ba83512725f05c453cce77d9f))
+* url-gen imports, overlay rules, and upload widget race condition ([08f06af](https://github.com/cloudinary-devs/create-cloudinary-react/commit/08f06af90ade2f957e3a1997afe352c145c65b82))
+
 # [1.0.0-beta.7](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-01-27)
 
 
