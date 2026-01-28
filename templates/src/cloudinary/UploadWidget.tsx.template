@@ -22,24 +22,11 @@ export function UploadWidget({
 }: UploadWidgetProps) {
   const widgetRef = useRef<any>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const clickHandlerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    // Load Cloudinary Upload Widget script
-    if (!window.cloudinary) {
-      const script = document.createElement('script');
-      script.src = 'https://upload-widget.cloudinary.com/global/all.js';
-      script.async = true;
-      document.body.appendChild(script);
-
-      script.onload = () => {
-        initializeWidget();
-      };
-    } else {
-      initializeWidget();
-    }
-
     function initializeWidget() {
-      if (!window.cloudinary || !buttonRef.current) return;
+      if (typeof window.cloudinary?.createUploadWidget !== 'function' || !buttonRef.current) return;
 
       if (!uploadPreset) {
         console.warn(
@@ -69,16 +56,45 @@ export function UploadWidget({
         }
       );
 
-      buttonRef.current.addEventListener('click', () => {
-        widgetRef.current?.open();
-      });
+      const handler = () => widgetRef.current?.open();
+      clickHandlerRef.current = handler;
+      buttonRef.current.addEventListener('click', handler);
+    }
+
+    function waitThenInit() {
+      if (typeof window.cloudinary?.createUploadWidget === 'function') {
+        initializeWidget();
+        return true;
+      }
+      return false;
+    }
+
+    if (!window.cloudinary) {
+      const script = document.createElement('script');
+      script.src = 'https://upload-widget.cloudinary.com/global/all.js';
+      script.async = true;
+      document.body.appendChild(script);
+      script.onload = () => waitThenInit();
+    } else if (!waitThenInit()) {
+      const poll = setInterval(() => {
+        if (waitThenInit()) {
+          clearInterval(poll);
+          clearTimeout(timeout);
+        }
+      }, 100);
+      const timeout = setTimeout(() => clearInterval(poll), 10000);
+      return () => {
+        clearInterval(poll);
+        clearTimeout(timeout);
+        if (buttonRef.current && clickHandlerRef.current) {
+          buttonRef.current.removeEventListener('click', clickHandlerRef.current);
+        }
+      };
     }
 
     return () => {
-      if (buttonRef.current && widgetRef.current) {
-        buttonRef.current.removeEventListener('click', () => {
-          widgetRef.current?.open();
-        });
+      if (buttonRef.current && clickHandlerRef.current) {
+        buttonRef.current.removeEventListener('click', clickHandlerRef.current);
       }
     };
   }, [onUploadSuccess, onUploadError]);

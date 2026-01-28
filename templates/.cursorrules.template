@@ -1,6 +1,6 @@
 # Cloudinary React SDK Patterns & Common Errors
 
-**Scope**: These rules apply to **React (web)** with Vite and the browser Upload Widget. For **React Native** uploads (including signed upload), see: https://cloudinary.com/documentation/react_native_image_and_video_upload#signed_upload — same “never expose secret, generate signature on backend” principle, but React Native uses the `upload()` method and backend SDKs differently.
+**Scope**: These rules apply to **React (web)** with the browser Upload Widget. The **default** is **Vite** (create-cloudinary-react uses Vite). They also work with **other bundlers** (Create React App, Next.js, Parcel, etc.): only **how you read env vars** changes; see **"Other bundlers (non-Vite)"** below. Rules-only users: see **"Project setup (rules-only / without CLI)"** for the reusable Cloudinary instance, env, Upload Widget (unsigned/signed), and video player. For **React Native** uploads (including signed upload), see: https://cloudinary.com/documentation/react_native_image_and_video_upload#signed_upload — same “never expose secret, generate signature on backend” principle, but React Native uses the `upload()` method and backend SDKs differently.
 
 ## Official Documentation
 - **Transformation Rules**: https://cloudinary.com/documentation/cloudinary_transformation_rules.md
@@ -16,15 +16,65 @@
 - Always consult the official transformation rules when creating transformations
 - Use only officially supported parameters from the transformation reference
 
+**Golden rule for @cloudinary/url-gen:** When generating overlay or transformation code, use **only** the "Import reference" table and "Canonical overlay block" in these rules. Copy those import paths and usage patterns exactly; do not guess or derive paths (e.g. `text` and `image` are from `qualifiers/source`, not `actions/overlay`; `Position` is from `qualifiers/position`, not `positioning/Position`).
+
 ---
 
 # 📋 PATTERNS (How to Do It Right)
 
+## Project setup (rules-only / without CLI)
+
+If the user is **not** using the create-cloudinary-react CLI and only has these rules, generate the following so they get correct config, env, and widget setup.
+
+**1. Environment (.env)**  
+Create a `.env` file in the project root with **Vite prefix** (required for client access):
+- `VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name` (required)
+- `VITE_CLOUDINARY_UPLOAD_PRESET=your_unsigned_preset_name` (optional; required for unsigned upload widget)
+- Restart the dev server after adding or changing `.env`. Use `import.meta.env.VITE_*` in code, not `process.env`.
+
+**2. Reusable Cloudinary instance (config)**  
+Create a config file (e.g. `src/cloudinary/config.ts`) so the rest of the app can use a single `cld` instance:
+```ts
+import { Cloudinary } from '@cloudinary/url-gen';
+
+const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+if (!cloudName) {
+  throw new Error('VITE_CLOUDINARY_CLOUD_NAME is not set. Add it to .env with the VITE_ prefix.');
+}
+
+export const cld = new Cloudinary({ cloud: { cloudName } });
+export const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+```
+- Use **this** pattern for the reusable instance. Everywhere else: `import { cld } from './cloudinary/config'` (or the path the user chose) and call `cld.image(publicId)` / `cld.video(publicId)`.
+
+**3. Upload Widget (unsigned, from scratch)**  
+- **Script**: Add to `index.html`: `<script src="https://upload-widget.cloudinary.com/global/all.js" async></script>`. Because the script loads **async**, React's useEffect can run before it's ready — **do not** call `createUploadWidget` until the script is loaded.
+- **Wait for script**: Before calling `window.cloudinary.createUploadWidget(...)`, ensure `typeof window.cloudinary?.createUploadWidget === 'function'`. If not ready, poll (e.g. setInterval) or wait for the script's `onload` (if you inject the script in code). Otherwise you get "createUploadWidget is not a function".
+- **Create widget in useEffect**, not in render. Store the widget in a **ref**. Pass options: `{ cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME, uploadPreset: uploadPreset || undefined, sources: ['local', 'camera', 'url'], multiple: false }`. Use `uploadPreset` from config or env.
+- **Open on click**: Attach a click listener to a button that calls `widgetRef.current?.open()`. Remove the listener in useEffect cleanup. Handle script load failures (e.g. show error state if script never loads).
+- **Signed uploads**: Do not use only `uploadPreset`; use the pattern under "Secure (Signed) Uploads" (uploadSignature as function, fetch api_key, server includes upload_preset in signature).
+
+**4. Video player**  
+- Use `cloudName` from `import.meta.env.VITE_CLOUDINARY_CLOUD_NAME` in player config. Validate it before init (e.g. if !cloudName, set error state). See "Cloudinary Video Player (The Player)" for full pattern (named import `videoPlayer`, `player.source({ publicId })`, refs, cleanup).
+
+**5. Summary for rules-only users**  
+- **Env**: Use your bundler's client env prefix and access (Vite: `VITE_` + `import.meta.env.VITE_*`; see "Other bundlers" if not Vite).
+- **Reusable instance**: One config file that creates and exports `cld` (and optionally `uploadPreset`) from `@cloudinary/url-gen`; use it everywhere.
+- **Upload widget**: Script in index.html (or equivalent); create widget once in useEffect with ref; unsigned = cloudName + uploadPreset; signed = use uploadSignature function and backend.
+- **Video player**: Named import `videoPlayer`, source object, refs, dispose in cleanup.
+
+**If the user is not using Vite:** Use their bundler's client env prefix and access in the config file and everywhere you read env. Examples: Create React App → `REACT_APP_CLOUDINARY_CLOUD_NAME`, `process.env.REACT_APP_CLOUDINARY_CLOUD_NAME`; Next.js (client) → `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`. The rest (cld instance, widget options, video player) is the same.
+
 ## Environment Variables
-- **Vite requires VITE_ prefix** - Environment variables MUST start with `VITE_` to be exposed to the browser
-- ✅ CORRECT: `VITE_CLOUDINARY_CLOUD_NAME=mycloud` in `.env` file
-- ✅ CORRECT: `import.meta.env.VITE_CLOUDINARY_CLOUD_NAME` (not `process.env`)
-- Always restart dev server after adding/updating `.env` variables
+- **Default: Vite** — Vite requires `VITE_` prefix; use `import.meta.env.VITE_CLOUDINARY_CLOUD_NAME` (not `process.env`). Restart dev server after changing `.env`.
+- ✅ CORRECT (Vite): `VITE_CLOUDINARY_CLOUD_NAME=mycloud` in `.env`; `import.meta.env.VITE_CLOUDINARY_CLOUD_NAME`
+
+## Other bundlers (non-Vite)
+- **Only the env access changes.** All other patterns (reusable `cld`, Upload Widget, Video Player, overlays, signed uploads) are bundler-agnostic.
+- **Create React App**: Prefix `REACT_APP_`; access `process.env.REACT_APP_CLOUDINARY_CLOUD_NAME`, `process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET`. Restart dev server after `.env` changes.
+- **Next.js (client)**: Prefix `NEXT_PUBLIC_` for client; access `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, etc. Server-side can use `process.env.CLOUDINARY_*` without `NEXT_PUBLIC_`.
+- **Parcel / other**: Check the bundler's docs for "exposing environment variables to the client" (often a prefix or allowlist). Use that prefix and the documented access (e.g. `process.env.*`).
+- **Config file**: In `src/cloudinary/config.ts` (or equivalent), read cloud name and upload preset using the **user's bundler** env API (e.g. for CRA: `process.env.REACT_APP_CLOUDINARY_CLOUD_NAME`). Same `new Cloudinary({ cloud: { cloudName } })` and exports; only the env read line changes.
 
 ## Upload Presets
 - **Unsigned** = client-only uploads (no backend). **Signed** = backend required, more secure. See **"Signed vs unsigned uploads"** below for when to use which.
@@ -42,22 +92,73 @@
 ## Import Patterns
 - ✅ Import Cloudinary instance: `import { cld } from './cloudinary/config'`
 - ✅ Import components: `import { AdvancedImage, AdvancedVideo } from '@cloudinary/react'`
-- ✅ Import transformations: `import { fill } from '@cloudinary/url-gen/actions/resize'`
-- ✅ Import effects: `import { blur } from '@cloudinary/url-gen/actions/effect'`
-- ✅ Import delivery: `import { format, quality } from '@cloudinary/url-gen/actions/delivery'`
-- ✅ Import qualifiers: `import { auto } from '@cloudinary/url-gen/qualifiers/format'`
-- ✅ Import qualifiers: `import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality'`
 - ✅ Import plugins: `import { responsive, lazyload, placeholder } from '@cloudinary/react'`
+- ✅ **For transformations and overlays**, use **only** the exact paths in "Import reference: @cloudinary/url-gen" and the "Canonical overlay block" below. Do **not** guess subpaths (e.g. `text` and `image` are from `qualifiers/source`, not `actions/overlay`).
+
+## Import reference: @cloudinary/url-gen (use these exact paths only)
+
+**Rule:** Do not invent or guess import paths for `@cloudinary/url-gen`. Use **only** the paths in the table and canonical block below. Copy the import statements exactly; do not derive paths (e.g. `@cloudinary/url-gen/overlay` exports only `source` — `text` and `image` are from **`qualifiers/source`**; `Position` is from **`qualifiers/position`**, not `positioning/Position`). Wrong paths cause "module not found" or "does not exist".
+
+| Purpose | Exact import |
+|--------|----------------|
+| Cloudinary instance (config) | `import { Cloudinary } from '@cloudinary/url-gen';` |
+| Resize (fill) | `import { fill } from '@cloudinary/url-gen/actions/resize';` |
+| Resize (scale, for overlays) | `import { scale } from '@cloudinary/url-gen/actions/resize';` |
+| Delivery format/quality | `import { format, quality } from '@cloudinary/url-gen/actions/delivery';` |
+| Format qualifier (auto) | `import { auto } from '@cloudinary/url-gen/qualifiers/format';` |
+| Quality qualifier (auto) | `import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality';` |
+| Effects (e.g. blur) | `import { blur } from '@cloudinary/url-gen/actions/effect';` |
+| Overlay source | `import { source } from '@cloudinary/url-gen/actions/overlay';` |
+| Overlay text / image (source types) | `import { text, image } from '@cloudinary/url-gen/qualifiers/source';` |
+| Overlay image transformation | `import { Transformation } from '@cloudinary/url-gen/transformation/Transformation';` |
+| Position (overlay) | `import { Position } from '@cloudinary/url-gen/qualifiers/position';` |
+| Gravity/compass | `import { compass } from '@cloudinary/url-gen/qualifiers/gravity';` |
+| Text style (overlay) | `import { TextStyle } from '@cloudinary/url-gen/qualifiers/textStyle';` |
+| Types | `import type { CloudinaryImage, CloudinaryVideo } from '@cloudinary/url-gen';` |
+
+**Canonical overlay block (copy these imports and patterns exactly):**
+```ts
+// Overlay imports — text/image from qualifiers/source, NOT actions/overlay
+import { source } from '@cloudinary/url-gen/actions/overlay';
+import { text, image } from '@cloudinary/url-gen/qualifiers/source';
+import { Position } from '@cloudinary/url-gen/qualifiers/position';
+import { TextStyle } from '@cloudinary/url-gen/qualifiers/textStyle';
+import { compass } from '@cloudinary/url-gen/qualifiers/gravity';
+import { Transformation } from '@cloudinary/url-gen/transformation/Transformation';
+import { scale } from '@cloudinary/url-gen/actions/resize';
+
+// Text overlay (compass with underscores: 'south_east', 'center')
+cld.image('id').overlay(
+  source(text('Hello', new TextStyle('Arial', 60).fontWeight('bold')).textColor('white'))
+    .position(new Position().gravity(compass('center')))
+);
+
+// Image overlay (logo/image with resize)
+cld.image('id').overlay(
+  source(image('logo').transformation(new Transformation().resize(scale().width(100).height(100))))
+    .position(new Position().gravity(compass('south_east')).offsetX(20).offsetY(20))
+);
+```
+
+- **Components** (AdvancedImage, AdvancedVideo, plugins) come from **`@cloudinary/react`**, not from `@cloudinary/url-gen`.
+- **Transformation actions and qualifiers** (resize, delivery, effect, overlay, etc.) come from **`@cloudinary/url-gen/actions/*`** and **`@cloudinary/url-gen/qualifiers/*`** with the exact subpaths above.
+- If an import fails, verify the package version (`@cloudinary/url-gen` in package.json) and the [Cloudinary URL-Gen SDK docs](https://cloudinary.com/documentation/sdks/js/url-gen/index.html) or [Transformation Builder reference](https://cloudinary.com/documentation/sdks/js/transformation_builder_reference).
 
 ## Creating Image & Video Instances
 - ✅ Create image instance: `const img = cld.image(publicId)`
 - ✅ Create video instance: `const video = cld.video(publicId)` (same pattern as images)
 - ✅ Public ID format: Use forward slashes for folders (e.g., `'folder/subfolder/image'`)
 - ✅ Public IDs are case-sensitive and should not include file extensions
+- ✅ **Sample assets**: Cloudinary may provide sample assets under `samples/`. **Assume they might not exist** (users can delete them); always handle load errors and provide fallbacks (see Image gallery). When they exist, use them for examples and demos instead of requiring uploads first.
+- ✅ **Sample public IDs that may be available** (use for galleries, demos; handle onError if missing):
+  - Images: `samples/cloudinary-icon`, `samples/two-ladies`, `samples/food/spices`, `samples/landscapes/beach-boat`, `samples/bike`, `samples/landscapes/girl-urban-view`, `samples/animals/reindeer`, `samples/food/pot-mussels`
+  - Video: `samples/elephants`
+- ✅ **Default / most reliable**: Start with `samples/cloudinary-icon` for a single image; use the list above for galleries or variety. Prefer uploaded assets when the user has them.
 - ✅ Examples:
   ```tsx
   const displayImage = cld.image('samples/cloudinary-icon');
   const displayVideo = cld.video('samples/elephants');
+  // Gallery: e.g. ['samples/bike', 'samples/landscapes/beach-boat', 'samples/food/spices', ...]
   ```
 
 ## Transformation Patterns
@@ -90,6 +191,7 @@
 - ✅ Same transformation syntax works for both images and videos
 
 ## Plugin Patterns
+- ✅ **When the user asks for lazy loading or responsive images**: Use the **Cloudinary plugins** from `@cloudinary/react` — `responsive()`, `lazyload()`, `placeholder()` — with `AdvancedImage`. Do not use only native `loading="lazy"` or CSS-only responsive; the Cloudinary plugins handle breakpoints, lazy loading, and placeholders for Cloudinary URLs.
 - ✅ Import plugins from `@cloudinary/react`
 - ✅ Pass plugins as array: `plugins={[responsive(), lazyload(), placeholder()]}`
 - ✅ Recommended plugin order:
@@ -109,6 +211,7 @@
   ```
 
 ## Responsive Images Pattern
+- ✅ **Responsive images**: Use the Cloudinary `responsive()` plugin with `fill()` resize (not only CSS). **Lazy loading**: Use the Cloudinary `lazyload()` plugin with `AdvancedImage` (not only `loading="lazy"`).
 - ✅ Use `responsive()` plugin with `fill()` resize
 - ✅ Combine with `placeholder()` and `lazyload()` plugins
 - ✅ Example:
@@ -122,12 +225,30 @@
   />
   ```
 
+## Image gallery with lazy loading and responsive
+- ✅ **When the user asks for an image gallery with lazy loading and responsive**: Use Cloudinary **plugins** with `AdvancedImage`: `responsive()`, `lazyload()`, `placeholder()` (see Plugin Patterns). Use `fill()` resize with the responsive plugin. Add `width` and `height` to prevent layout shift.
+- ✅ **Sample assets in galleries**: Use the sample public IDs from "Creating Image & Video Instances" (e.g. `samples/bike`, `samples/landscapes/beach-boat`, `samples/food/spices`, `samples/two-ladies`, `samples/landscapes/girl-urban-view`, `samples/animals/reindeer`, `samples/food/pot-mussels`, `samples/cloudinary-icon`). **Assume any sample might not exist** — users can delete them. Start with one reliable sample (e.g. `samples/cloudinary-icon`) or a short list; add **onError** handling and remove/hide failed images. Prefer **uploaded** assets when available (e.g. from UploadWidget) over samples.
+- ✅ **Handle load errors**: Use `onError` on `AdvancedImage` to hide or remove failed images (e.g. set state to filter out the publicId, or hide the parent). Provide user feedback (e.g. "Some images could not be loaded. Try uploading your own!") and upload functionality so users can add their own images.
+- ✅ **Fallback**: Default gallery list can be a subset of the sample list (e.g. `['samples/cloudinary-icon', 'samples/bike', 'samples/landscapes/beach-boat']`); when user uploads, append `result.public_id`. If an image fails to load, remove it from the list or hide it so the UI doesn't show broken images.
+
+## Image Overlays (text or logos)
+- ✅ **When the user asks for image overlays with text or logos**: Use `@cloudinary/url-gen` overlay APIs. Copy imports and patterns from the **"Import reference"** table and **"Canonical overlay block"** in these rules. Do not import `text` or `image` from `actions/overlay` — they are from **`qualifiers/source`**; only `source` is from `actions/overlay`.
+- ✅ **Import** `source` from `actions/overlay`; **`text` and `image` from `qualifiers/source`**. Also: `Position` from `qualifiers/position`, `TextStyle` from `qualifiers/textStyle`, `compass` from `qualifiers/gravity`, `Transformation` from `transformation/Transformation`, `scale` from `actions/resize`.
+- ✅ **compass()** takes **string** values, with **underscores**: `compass('center')`, `compass('south_east')`, `compass('north_west')`. ❌ WRONG: `compass(southEast)` or `'southEast'` (no camelCase).
+- ✅ **Overlay image**: Use `new Transformation()` **inside** `.transformation()`: `image('logo').transformation(new Transformation().resize(scale().width(100).height(100)))`. ❌ WRONG: `image('logo').transformation().resize(...)` (`.transformation()` does not return a chainable object).
+- ✅ **Text overlay**: `fontWeight` goes on **TextStyle**: `new TextStyle('Arial', 60).fontWeight('bold')`. `textColor` goes on the **text source** (chained after `text(...)`): `text('Hello', new TextStyle('Arial', 60)).textColor('white')`.
+- ✅ **Position** is chained **after** `source(...)`, not inside: `source(image('logo').transformation(...)).position(new Position().gravity(compass('south_east')).offsetX(20).offsetY(20))`.
+- ✅ **Image overlay pattern**: `baseImage.overlay(source(image('id').transformation(new Transformation().resize(scale().width(100).height(100)))).position(new Position().gravity(compass('south_east')).offsetX(20).offsetY(20)))`. (Import `scale` from `@cloudinary/url-gen/actions/resize` if needed.)
+- ✅ **Text overlay pattern**: `baseImage.overlay(source(text('Your Text', new TextStyle('Arial', 60).fontWeight('bold')).textColor('white')).position(new Position().gravity(compass('center'))))`.
+- ✅ Docs: React Image Transformations and transformation reference for overlay syntax.
+
 ## Upload Widget Pattern
 - ✅ Use component: `import { UploadWidget } from './cloudinary/UploadWidget'`
 - ✅ Load script in `index.html`:
   ```html
   <script src="https://upload-widget.cloudinary.com/global/all.js" async></script>
   ```
+- ✅ **Race condition**: The script loads **async**, so React's useEffect may run before `createUploadWidget` exists. **Wait until** `typeof window.cloudinary?.createUploadWidget === 'function'` before calling it (e.g. poll with setInterval or wait for script onload). Checking only `window.cloudinary` is not enough — `createUploadWidget` might not be attached yet. Otherwise: "createUploadWidget is not a function".
 - ✅ Create unsigned upload preset in dashboard at `settings/upload/presets`
 - ✅ Add to `.env`: `VITE_CLOUDINARY_UPLOAD_PRESET=your_preset_name`
 - ✅ Handle callbacks:
@@ -237,22 +358,23 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
 
 ## Video Patterns
 
+- ✅ **Display a video** → Use **AdvancedVideo** (`@cloudinary/react`). It just displays a video (with optional transformations). Not a full player.
+- ✅ **A video player** → Use **Cloudinary Video Player** (`cloudinary-video-player`). That is the actual player (styled UI, controls, playlists, etc.).
+
 ### ⚠️ IMPORTANT: Two Different Approaches
 
-**1. AdvancedVideo Component** (`@cloudinary/react`) - For video transformations
-- React component similar to `AdvancedImage`
-- Use for displaying videos with Cloudinary transformations
-- Works with `cld.video()` like images work with `cld.image()`
-- Simple, React-friendly approach
+**1. AdvancedVideo** (`@cloudinary/react`) — For **displaying** a video
+- React component similar to `AdvancedImage`; just displays a video with Cloudinary transformations
+- Not a full "player" — it's video display (native HTML5 video with optional controls)
+- Use when: user wants to show/display a video. Works with `cld.video()` like images with `cld.image()`
 
-**2. Cloudinary Video Player** (`cloudinary-video-player`) - For advanced player features
-- Standalone video player library
-- Use for advanced features: playlists, recommendations, ads, chapters, etc.
-- Full-featured player with analytics, monetization, etc.
-- More complex setup, but more powerful
+**2. Cloudinary Video Player** (`cloudinary-video-player`) — The **player**
+- Full-featured video player (styled UI, controls, playlists, recommendations, ads, chapters)
+- Use when: user asks for a "video player" or needs player features (playlists, ads, etc.)
+- Separate package; requires CSS and useEffect with `player.dispose()` cleanup
 
-### AdvancedVideo Component (React SDK - For Transformations)
-- ✅ **Purpose**: Display videos with Cloudinary transformations (resize, effects, etc.)
+### AdvancedVideo (React SDK - For Displaying a Video)
+- ✅ **Purpose**: Display a video with Cloudinary transformations (resize, effects, etc.). It is **not** a full player — it is for showing a video. For a player, use Cloudinary Video Player.
 - ✅ **Package**: `@cloudinary/react` (same as AdvancedImage)
 - ✅ **Import**: `import { AdvancedVideo } from '@cloudinary/react'`
 - ✅ **NO CSS IMPORT NEEDED**: AdvancedVideo uses native HTML5 video - no CSS import required
@@ -275,37 +397,49 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
   ```
 - ✅ **Documentation**: https://cloudinary.com/documentation/react_video_transformations
 
-### Cloudinary Video Player (Standalone - For Advanced Features)
-- ✅ **Purpose**: Full-featured video player with playlists, recommendations, ads, etc.
+### Cloudinary Video Player (The Player)
+- ✅ **Purpose**: The actual video player — full-featured UI, controls, playlists, recommendations, ads, chapters. Use when the user asks for a "video player"; use AdvancedVideo when they just need to display a video.
 - ✅ **Package**: `cloudinary-video-player` (separate package)
-- ✅ **Import**: `import cloudinary from 'cloudinary-video-player'`
-- ✅ **Import CSS**: `import 'cloudinary-video-player/dist/cld-video-player.css'`
-- ✅ **Import modules** (for advanced features):
+- ✅ **Import** (named, not default): `import { videoPlayer } from 'cloudinary-video-player'` and `import 'cloudinary-video-player/cld-video-player.min.css'`. If CSS fails, try `'cloudinary-video-player/dist/cld-video-player.css'`.
+- ❌ **WRONG**: `import cloudinary from 'cloudinary-video-player'` then `cloudinary.videoPlayer(...)` — use named `videoPlayer` instead.
+- ✅ **player.source()** takes an **object**, not a string: `player.source({ publicId: 'samples/elephants' })`. ❌ WRONG: `player.source('samples/elephants')`.
+- ✅ **Use refs**, not IDs: `const videoRef = useRef<HTMLVideoElement>(null)`; pass `videoRef.current` to `videoPlayer()`. Avoid `document.getElementById` with React (can cause DOM conflicts).
+- ✅ **Store player in a ref**, not state: `const playerRef = useRef<ReturnType<typeof videoPlayer> | null>(null)`.
+- ✅ **Race condition (ref/DOM)**: useEffect runs right after render; at that moment `videoRef.current` may still be **null** (ref not attached yet) or the element may not be in the DOM. **Wait until** `videoRef.current` is set and ready before calling `videoPlayer(videoRef.current, ...)`. Options: (1) small delay (e.g. `setTimeout(..., 0)` or 50ms) then check `videoRef.current`; (2) `useLayoutEffect` so ref is committed before running; (3) poll until `videoRef.current?.isConnected`. Otherwise: "Invalid target for null#on; must be a DOM node or evented object".
+- ✅ **Initialize in useEffect** (or useLayoutEffect) with cleanup; **always dispose** in cleanup (wrap in try-catch so disposal errors don't throw).
+- ✅ **Validate env** before init: if `!import.meta.env.VITE_CLOUDINARY_CLOUD_NAME`, set error state and return early.
+- ✅ **Config**: `videoPlayer(element, { cloudName, secure: true, controls: true, fluid: true })`.
+- ✅ **Example** (refs, source object, wait for ref/DOM, cleanup with try-catch):
   ```tsx
-  import 'cloudinary-video-player/dist/adaptive-streaming'; // HLS/DASH
-  import 'cloudinary-video-player/dist/playlist'; // Playlists
-  import 'cloudinary-video-player/dist/recommendations-overlay'; // Recommendations
-  // Or import all: import 'cloudinary-video-player/dist/all'
-  ```
-- ✅ **Initialize in useEffect** with cleanup:
-  ```tsx
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<ReturnType<typeof videoPlayer> | null>(null);
   useEffect(() => {
-    const player = cloudinary.videoPlayer(ref.current, {
-      cloud_name: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
-      secure: true,
-      controls: true,
-    });
-    player.source(publicId);
-    return () => player.dispose(); // Always cleanup!
-  }, [publicId]);
+    if (!cloudName) return;
+    // Wait for ref to be attached and element in DOM (avoids "Invalid target for null#on")
+    const timeoutId = setTimeout(() => {
+      if (!videoRef.current) return;
+      try {
+        const player = videoPlayer(videoRef.current, { cloudName, secure: true, controls: true, fluid: true });
+        player.source({ publicId: 'samples/elephants' }); // object, not string
+        playerRef.current = player;
+      } catch (err) { console.error(err); }
+    }, 0);
+    return () => {
+      clearTimeout(timeoutId);
+      if (playerRef.current) {
+        try { playerRef.current.dispose(); } catch (e) { console.warn(e); }
+        playerRef.current = null;
+      }
+    };
+  }, [cloudName]);
+  return <video ref={videoRef} className="cld-video-player cld-fluid" />;
   ```
-- ✅ **Video element classes**: `className="cld-video-player cld-fluid"`
 - ✅ **Documentation**: https://cloudinary.com/documentation/cloudinary_video_player
 - ✅ **React Tutorial**: https://cloudinary.com/documentation/video_player_react_tutorial#banner
 
 ### When to Use Which?
-- ✅ **Use AdvancedVideo** when: You need simple video playback with transformations
-- ✅ **Use Video Player** when: You need playlists, recommendations, ads, chapters, or other advanced features
+- ✅ **Use AdvancedVideo** when: User wants to **display** or **show** a video (no full player). It just displays a video with transformations.
+- ✅ **Use Cloudinary Video Player** when: User asks for a **video player** — the actual player with styled UI, controls, and optional features (playlists, ads, etc.).
 
 ## TypeScript Patterns
 
@@ -431,6 +565,10 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
 
 ## Environment Variable Errors
 
+### "Where do I create the Cloudinary instance?" / "Config with Vite prefix"
+- ❌ Problem: User is using rules only (no CLI) and doesn't have a Cloudinary config file, or is using wrong env (e.g. process.env, or missing VITE_ prefix).
+- ✅ Create a **single config file** (e.g. `src/cloudinary/config.ts`) that: imports `Cloudinary` from `@cloudinary/url-gen`, reads `import.meta.env.VITE_CLOUDINARY_CLOUD_NAME`, validates it, creates `export const cld = new Cloudinary({ cloud: { cloudName } })`, and exports `uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || ''`. Use **VITE_** prefix in `.env`; access with `import.meta.env.VITE_*` only. See PATTERNS → "Project setup (rules-only / without CLI)" for exact code.
+
 ### "Cloud name is required"
 - ❌ Problem: `VITE_CLOUDINARY_CLOUD_NAME` not set or wrong prefix
 - ✅ Solution:
@@ -439,20 +577,18 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
   3. Restart dev server after adding .env variables
 
 ### "VITE_ prefix required" or env var is undefined
-- ❌ Problem: Variable doesn't have `VITE_` prefix
-- ✅ Solution:
-  1. Rename `CLOUDINARY_CLOUD_NAME` → `VITE_CLOUDINARY_CLOUD_NAME`
-  2. Restart dev server
-  3. Use `import.meta.env.VITE_CLOUDINARY_CLOUD_NAME` (not `process.env`)
+- ❌ Problem: Variable doesn't have the right prefix for the bundler, or wrong access (e.g. process.env in Vite, or no prefix in CRA).
+- ✅ **Vite**: Use `VITE_` prefix in `.env` and `import.meta.env.VITE_CLOUDINARY_CLOUD_NAME` (not `process.env`).
+- ✅ **Not Vite?** Use your bundler's client env prefix and access: Create React App → `REACT_APP_` and `process.env.REACT_APP_CLOUDINARY_CLOUD_NAME`; Next.js (client) → `NEXT_PUBLIC_` and `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`. See PATTERNS → "Other bundlers (non-Vite)".
+- Restart dev server after changing `.env`.
 
 ## Import Errors
 
 ### "Cannot find module" or wrong import
-- ❌ Problem: Importing from wrong package
-- ✅ Solution:
-  - Components: `@cloudinary/react` (not `@cloudinary/url-gen`)
-  - Transformations: `@cloudinary/url-gen/actions/*` (not `@cloudinary/react`)
-  - Cloudinary class: `@cloudinary/url-gen` (not `@cloudinary/react`)
+- ❌ Problem: Importing from wrong package or wrong subpath; agent often invents paths that don't exist.
+- ✅ **Use only the exact paths** in PATTERNS → "Import reference: @cloudinary/url-gen (use these exact paths only)". Do **not** guess subpaths (e.g. `@cloudinary/url-gen/resize` or `@cloudinary/url-gen/overlay` — use `actions/resize`, `actions/overlay` with the exact export names from the table).
+- ✅ Components and plugins: `@cloudinary/react` (not `@cloudinary/url-gen`). Cloudinary instance and transformation actions/qualifiers: `@cloudinary/url-gen` with the exact subpaths from the Import reference (e.g. `actions/resize`, `actions/delivery`, `qualifiers/format`, `qualifiers/quality`, `actions/overlay`, `qualifiers/gravity`, `qualifiers/textStyle`, `qualifiers/position`, `transformation/Transformation`).
+- ✅ If a path fails, check package.json has `@cloudinary/url-gen` and match the import to the Import reference table exactly.
 
 ## Transformation Errors
 
@@ -524,6 +660,16 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
   2. Check widget initializes in `useEffect` after `window.cloudinary` is available
   3. Verify upload preset is set correctly
 
+### "createUploadWidget is not a function"
+- ❌ Problem: **Race condition** — the script in index.html loads **async**, so React's useEffect can run before the script has finished loading. `window.cloudinary` might exist but `createUploadWidget` isn't attached yet.
+- ✅ **Wait for script**: Before calling `window.cloudinary.createUploadWidget(...)`, ensure `typeof window.cloudinary?.createUploadWidget === 'function'`. If not ready, poll (e.g. setInterval until it exists) or inject the script in code and call createUploadWidget in the script's `onload`. Don't assume `window.cloudinary` means the API is ready.
+- ✅ See PATTERNS → Upload Widget Pattern ("Race condition") and Project setup → Upload Widget ("Wait for script").
+
+### Video player: "Invalid target for null#on; must be a DOM node or evented object"
+- ❌ Problem: **Race condition** — useEffect runs right after render; at that moment `videoRef.current` may still be **null** (ref not attached) or the element may not be in the DOM. The player library requires a real DOM node.
+- ✅ **Wait for ref/DOM**: Before calling `videoPlayer(videoRef.current, ...)`, ensure `videoRef.current` is set. Use a short delay (e.g. `setTimeout(..., 0)` or 50ms) then check `videoRef.current`, or use `useLayoutEffect`, or poll until `videoRef.current?.isConnected`. Clean up the timeout in useEffect cleanup.
+- ✅ See PATTERNS → Cloudinary Video Player ("Race condition (ref/DOM)") and the example with `setTimeout(..., 0)`.
+
 ### User needs secure/signed uploads
 - ❌ Problem: User asks for secure uploads; unsigned preset or client-side secret is not acceptable.
 - ✅ Use signed preset + server-side signature. Use **`uploadSignature` as a function** (not `signatureEndpoint`); fetch `api_key` from server first; include `uploadPreset` in widget config; server must include `upload_preset` in signed params. Use Cloudinary Node SDK **v2** on server. Never expose or commit the API secret.
@@ -571,20 +717,39 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
   6. For advanced features, ensure required modules are imported
 
 ### Confusion between AdvancedVideo and Video Player
-- ❌ WRONG: Using `cloudinary-video-player` when you just need transformations
-- ✅ CORRECT: Use `AdvancedVideo` from `@cloudinary/react` for simple video playback with transformations
-- ❌ WRONG: Using `AdvancedVideo` when you need playlists/recommendations/ads
-- ✅ CORRECT: Use `cloudinary-video-player` for advanced features like playlists, recommendations, ads
+- **AdvancedVideo** = for **displaying** a video (not a full player). **Cloudinary Video Player** = the **player** (styled UI, controls, playlists, etc.).
+- ❌ WRONG: Using `cloudinary-video-player` when you just need to display a video
+- ✅ CORRECT: Use `AdvancedVideo` when you need to display/show a video
+- ❌ WRONG: Using `AdvancedVideo` when the user asks for a "video player"
+- ✅ CORRECT: Use `cloudinary-video-player` when they want a video player (or playlists, ads, etc.)
 
 ### Memory leak from video player
 - ❌ WRONG: Not disposing player in cleanup
-- ✅ CORRECT: Always dispose player:
+- ✅ CORRECT: Always dispose in cleanup; wrap in try-catch so disposal errors don't throw:
   ```tsx
-  useEffect(() => {
-    const player = cloudinary.videoPlayer(ref.current, config);
-    return () => player.dispose(); // Always cleanup!
-  }, [dependencies]);
+  return () => {
+    if (playerRef.current) {
+      try { playerRef.current.dispose(); } catch (e) { console.warn(e); }
+      playerRef.current = null;
+    }
+  };
   ```
+
+### Video player: "source is not a function" or video not playing
+- ❌ Problem: Using `player.source(publicId)` with a string.
+- ✅ **player.source()** takes an **object**: `player.source({ publicId: 'samples/elephants' })`. Use named import: `import { videoPlayer } from 'cloudinary-video-player'` (not default `import cloudinary`). Use refs for the DOM element, not `document.getElementById`. See PATTERNS → Cloudinary Video Player (The Player).
+
+### Overlay: "Cannot read properties of undefined" or overlay not showing
+- ❌ Problem: Wrong overlay API usage (Overlay.source, compass constants, .transformation().resize, fontWeight on wrong object).
+- ✅ Import `source` directly from `@cloudinary/url-gen/actions/overlay` (not `Overlay.source`). Use **string** values for compass: `compass('south_east')` (underscores, not camelCase). Use `new Transformation()` inside `.transformation()`. Put `fontWeight` on **TextStyle**; put `textColor` on the **text source**. See PATTERNS → Image Overlays (text or logos).
+
+### Overlay: wrong import path for `text` or `image`
+- ❌ Problem: Importing `text` or `image` from `@cloudinary/url-gen/actions/overlay` — that module only exports `source`.
+- ✅ **`text` and `image`** come from **`@cloudinary/url-gen/qualifiers/source`**. Use the "Canonical overlay block" in these rules: `import { text, image } from '@cloudinary/url-gen/qualifiers/source';`
+
+### Gallery: sample images not loading or 404s
+- ❌ Problem: Assuming sample public IDs (e.g. from the samples list) always exist; users can delete them.
+- ✅ Assume samples might not exist. Use the sample list from PATTERNS → "Creating Image & Video Instances" (e.g. `samples/cloudinary-icon`, `samples/bike`, `samples/landscapes/beach-boat`, `samples/food/spices`, etc.); use **onError** on `AdvancedImage` to hide or remove failed images; prefer uploaded assets when available. See PATTERNS → Image gallery with lazy loading and responsive.
 
 ## TypeScript Errors
 
@@ -637,18 +802,26 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
 ## Quick Reference Checklist
 
 When something isn't working, check:
-- [ ] Environment variables have `VITE_` prefix (client); **never** put API secret in `VITE_` vars
+- [ ] **Rules-only?** → Create config file with reusable `cld` and export `uploadPreset`; use your bundler's client env prefix in .env; create Upload Widget in useEffect with ref (see "Project setup (rules-only / without CLI)").
+- [ ] **Not Vite?** → Use your bundler's env prefix and access (e.g. REACT_APP_ + process.env.REACT_APP_*; NEXT_PUBLIC_ + process.env.NEXT_PUBLIC_*). See "Other bundlers (non-Vite)".
+- [ ] Environment variables use the correct prefix for your bundler (Vite: VITE_; CRA: REACT_APP_; Next client: NEXT_PUBLIC_); **never** put API secret in client-exposed vars
 - [ ] Dev server was restarted after .env changes
-- [ ] Imports are from correct packages
+- [ ] **@cloudinary/url-gen imports?** → Use only the exact paths from PATTERNS → "Import reference" and "Canonical overlay block" (e.g. `text`/`image` from `qualifiers/source`, not `actions/overlay`)
+- [ ] Imports are from correct packages (components/plugins from @cloudinary/react; actions/qualifiers from @cloudinary/url-gen with exact paths)
 - [ ] Transformations are chained on image instance
 - [ ] Format/quality use separate `.delivery()` calls
 - [ ] Plugins are in array format
 - [ ] Upload widget script is loaded in `index.html`
+- [ ] **"createUploadWidget is not a function"?** → Wait until `typeof window.cloudinary?.createUploadWidget === 'function'` before calling it (script loads async; poll or use script onload)
+- [ ] **Video player "Invalid target for null#on"?** → Wait for ref/DOM before calling videoPlayer (e.g. setTimeout 0 or 50ms, or useLayoutEffect); clean up timeout in useEffect cleanup
 - [ ] **Upload fails (unsigned)?** → Is `VITE_CLOUDINARY_UPLOAD_PRESET` set? Preset exists and is Unsigned in dashboard?
 - [ ] **Secure uploads?** → Use `uploadSignature` as function (not `signatureEndpoint`); fetch `api_key` from server first; include `uploadPreset` in widget config; server includes `upload_preset` in signed params; use Cloudinary Node SDK v2 on server; never expose or commit API secret
 - [ ] **Where do API key/secret go?** → **Do not** put in root `.env`. Use **`server/.env`**; add to `.gitignore`; load only in server. **Never commit** API key or secret
 - [ ] Upload preset is unsigned (for simple client uploads)
-- [ ] Video player is disposed in cleanup
+- [ ] **Video player?** → Use named import `videoPlayer` from `cloudinary-video-player`; `player.source({ publicId })` (object, not string); use refs; dispose in cleanup with try-catch; CSS: `cloudinary-video-player/cld-video-player.min.css`
+- [ ] **Image overlays?** → Import `source` (not Overlay.source); `compass('south_east')` (strings with underscores); `new Transformation()` inside `.transformation()`; fontWeight on TextStyle, textColor on text source
+- [ ] **Image gallery?** → Use responsive/lazyload/placeholder plugins; use sample list (samples/cloudinary-icon, samples/bike, samples/landscapes/beach-boat, samples/food/spices, etc.); assume samples might not exist; use onError; prefer uploaded assets
+- [ ] Video player is disposed in cleanup (with try-catch)
 - [ ] CSS files are imported for video player
 - [ ] TypeScript types are properly imported
 - [ ] Upload result types are defined (not using `any`)

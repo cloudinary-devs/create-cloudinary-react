@@ -60,16 +60,11 @@ function App() {
 
         <div className="ai-prompts-section">
           <h2>🤖 Try Asking Your AI Assistant</h2>
-          <p className="prompts-intro">Here are some Cloudinary-related tasks you can try:</p>
+          <p className="prompts-intro">Ping your agent with one of these to get started:</p>
           <ul className="prompts-list">
-            <li>"Add responsive image transformations with breakpoints"</li>
-            <li>"Create a video player component with Cloudinary"</li>
-            <li>"Add image effects like blur, grayscale, or sepia"</li>
-            <li>"Implement automatic image cropping with face detection"</li>
-            <li>"Add image overlays with text or logos"</li>
-            <li>"Create an image gallery with lazy loading"</li>
-            <li>"Add image optimization with format and quality auto"</li>
-            <li>"Implement image transformations based on screen size"</li>
+            <li>Create an image gallery with lazy loading and responsive</li>
+            <li>Create a video player that plays a Cloudinary video</li>
+            <li>Add image overlays with text or logos</li>
           </ul>
         </div>
       </main>
