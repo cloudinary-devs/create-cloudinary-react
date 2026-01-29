@@ -400,7 +400,7 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
 ### Cloudinary Video Player (The Player)
 - ✅ **Purpose**: The actual video player — full-featured UI, controls, playlists, recommendations, ads, chapters. Use when the user asks for a "video player"; use AdvancedVideo when they just need to display a video.
 - ✅ **Package**: `cloudinary-video-player` (separate package)
-- ✅ **Import** (named, not default): `import { videoPlayer } from 'cloudinary-video-player'` and `import 'cloudinary-video-player/cld-video-player.min.css'`. If CSS fails, try `'cloudinary-video-player/dist/cld-video-player.css'`.
+- ✅ **Import** (named, not default): `import { videoPlayer } from 'cloudinary-video-player'` and `import 'cloudinary-video-player/cld-video-player.min.css'`. **Do not use `dist/` in the CSS path** — use `cloudinary-video-player/cld-video-player.min.css` only.
 - ❌ **WRONG**: `import cloudinary from 'cloudinary-video-player'` then `cloudinary.videoPlayer(...)` — use named `videoPlayer` instead.
 - ✅ **player.source()** takes an **object**, not a string: `player.source({ publicId: 'samples/elephants' })`. ❌ WRONG: `player.source('samples/elephants')`.
 - ✅ **Use refs**, not IDs: `const videoRef = useRef<HTMLVideoElement>(null)`; pass `videoRef.current` to `videoPlayer()`. Avoid `document.getElementById` with React (can cause DOM conflicts).
@@ -710,7 +710,7 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
 - ❌ Problem: Configuration or initialization issue with standalone player
 - ✅ Solution:
   1. Check `cloud_name` is provided in player config
-  2. Ensure CSS file is imported: `import 'cloudinary-video-player/dist/cld-video-player.css'`
+  2. Ensure CSS file is imported: `import 'cloudinary-video-player/cld-video-player.min.css'` (no `dist/` in path)
   3. Verify player is initialized in `useEffect` with proper cleanup
   4. Check video element has required classes: `cld-video-player cld-fluid`
   5. Always call `player.dispose()` in useEffect cleanup function
