@@ -1,3 +1,10 @@
+# [1.0.0-beta.11](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-01-30)
+
+
+### Features
+
+* put Inquirer inputs on a new, separate line ([ba4a26d](https://github.com/cloudinary-devs/create-cloudinary-react/commit/ba4a26d0a84321ef8461babbd0c42bbe1fb77e81))
+
 # [1.0.0-beta.10](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-01-30)
 
 
