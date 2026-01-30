@@ -31,7 +31,7 @@ async function main() {
     {
       type: 'input',
       name: 'projectName',
-      message: 'Project name:',
+      message: 'What’s your project’s name?\n',
       default: 'my-cloudinary-app',
       validate: (input) => {
         if (!input.trim()) {
@@ -50,14 +50,14 @@ async function main() {
       type: 'input',
       name: 'cloudName',
       message:
-        'Cloudinary Cloud Name:\n' +
-        chalk.gray('Dashboard: https://console.cloudinary.com/app/home/dashboard'),
+        'What’s your Cloudinary cloud name?\n' +
+        chalk.gray(' → Find your cloud name: https://console.cloudinary.com/app/home/dashboard') + '\n',
       validate: (input) => {
         if (!input.trim()) {
           return chalk.yellow(
             'Cloud name is required.\n' +
-            '  → Sign up: https://cloudinary.com/users/register/free\n' +
-            '  → Find your cloud name: https://console.cloudinary.com/app/home/dashboard'
+            ' → Sign up: https://cloudinary.com/users/register/free\n' +
+            ' → Find your cloud name: https://console.cloudinary.com/app/home/dashboard'
           );
         }
         if (!isValidCloudName(input)) {
@@ -70,14 +70,15 @@ async function main() {
       type: 'confirm',
       name: 'hasUploadPreset',
       message:
-        'Do you have an unsigned upload preset? (Required for uploads, optional for transformations)\n' +
-        chalk.gray('Create one: https://console.cloudinary.com/app/settings/upload/presets'),
+        'Do you have an unsigned upload preset?\n' +
+        chalk.gray(' → You’ll need one if you want to upload new images to Cloudinary,\n   but not if you only want to transform or deliver existing images.') + '\n' +
+        chalk.gray(' → Create one here: https://console.cloudinary.com/app/settings/upload/presets') + '\n',
       default: false,
     },
     {
       type: 'input',
       name: 'uploadPreset',
-      message: 'Upload Preset Name:',
+      message: 'What’s your unsigned upload preset’s name?\n',
       when: (answers) => answers.hasUploadPreset,
       validate: (input) => {
         if (!input.trim()) {
@@ -101,13 +102,13 @@ async function main() {
     {
       type: 'confirm',
       name: 'installDeps',
-      message: 'Install dependencies now?',
+      message: 'Install dependencies now?\n',
       default: true,
     },
     {
       type: 'confirm',
       name: 'startDev',
-      message: 'Start development server?',
+      message: 'Start development server?\n',
       default: false,
       when: (answers) => answers.installDeps,
     },
