@@ -284,7 +284,7 @@ cld.image('id').overlay(
 - Client: Widget gets `api_key` (from your backend), `uploadPreset`, and an `uploadSignature` **function** that calls your backend for each upload. API secret stays on server only.
 - Trade-off: Requires a backend (Node/Express, Next.js API route, etc.) to sign requests. More secure; signature validates each upload.
 
-**Rule of thumb**: If the user asks for "secure" or "signed" uploads, or needs to restrict uploads, use **signed** with a backend. For simple demos or when preset exposure is acceptable, **unsigned** is fine.
+**Rule of thumb**: **Default to unsigned uploads** unless the user explicitly asks for "secure" or "signed" uploads. Do not default to signed — it requires a running backend and will fail out of the box. Use **signed** only when the user explicitly requests secure/signed uploads or needs to restrict who can upload.
 
 ## Secure (Signed) Uploads
 
@@ -818,6 +818,7 @@ When something isn't working, check:
 - [ ] **"createUploadWidget is not a function"?** → Wait until `typeof window.cloudinary?.createUploadWidget === 'function'` before calling it (script loads async; poll or use script onload)
 - [ ] **Video player?** → **Imperative element only**: createElement('video'), append to container ref, pass to videoPlayer(el, ...); player.source({ publicId }); cleanup: dispose then if (el.parentNode) el.parentNode.removeChild(el). CSS: cloudinary-video-player/cld-video-player.min.css. If init fails, fall back to AdvancedVideo (do not relax CSP).
 - [ ] **Upload fails (unsigned)?** → Is `VITE_CLOUDINARY_UPLOAD_PRESET` set? Preset exists and is Unsigned in dashboard?
+- [ ] **Upload default?** → Default to **unsigned** uploads (cloudName + uploadPreset); use signed only when the user explicitly asks for secure/signed uploads (signed requires a running backend)
 - [ ] **Secure uploads?** → Use `uploadSignature` as function (not `signatureEndpoint`); fetch `api_key` from server first; include `uploadPreset` in widget config; server includes `upload_preset` in signed params; use Cloudinary Node SDK v2 on server; never expose or commit API secret
 - [ ] **Where do API key/secret go?** → **Do not** put in root `.env`. Use **`server/.env`**; add to `.gitignore`; load only in server. **Never commit** API key or secret
 - [ ] Upload preset is unsigned (for simple client uploads)
