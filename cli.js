@@ -7,6 +7,7 @@ import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import fs from 'fs-extra';
+import { parseArgs } from 'node:util';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,95 +25,141 @@ function isValidProjectName(name) {
 }
 
 async function main() {
-  console.log(chalk.cyan.bold('\n🚀 Cloudinary React + Vite Boilerplate\n'));
-  console.log(chalk.gray('💡 Need a Cloudinary account? Sign up for free: https://cloudinary.com/users/register/free\n'));
+  
+  let answers = {};
+  
+  if (process.argv.includes('--headless')) {
 
-  const answers = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'projectName',
-      message: 'What’s your project’s name?\n',
-      default: 'my-cloudinary-app',
-      validate: (input) => {
-        if (!input.trim()) {
-          return 'Project name cannot be empty';
+    const { values, positionals } = parseArgs({
+      options: {
+        headless: {
+          type: 'boolean'
+        },
+        projectName: {
+          type: 'string',
+          default: 'my-cloudinary-app'
+        },
+        cloudName: {
+          type: 'string'
+        },
+        hasUploadPreset: {
+          type: 'boolean',
+          default: false
+        },
+        uploadPreset: {
+          type: 'string'
+        },
+        aiTools: {
+          type: 'string',
+          multiple: true,
+          default: ['cursor']
+        },
+        installDeps: {
+          type: 'boolean',
+          default: true
+        },
+        startDev: {
+          type: 'boolean',
+          default: false
         }
-        if (!isValidProjectName(input)) {
-          return 'Project name can only contain letters, numbers, hyphens, and underscores';
-        }
-        if (existsSync(input)) {
-          return `Directory "${input}" already exists. Please choose a different name.`;
-        }
-        return true;
+      }
+    });
+    console.log(values)
+    
+    Object.assign(answers, values);
+    
+  } else {
+  
+    console.log(chalk.cyan.bold('\n🚀 Cloudinary React + Vite Boilerplate\n'));
+    console.log(chalk.gray('💡 Need a Cloudinary account? Sign up for free: https://cloudinary.com/users/register/free\n'));
+  
+    answers = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'projectName',
+        message: 'What’s your project’s name?\n',
+        default: 'my-cloudinary-app',
+        validate: (input) => {
+          if (!input.trim()) {
+            return 'Project name cannot be empty';
+          }
+          if (!isValidProjectName(input)) {
+            return 'Project name can only contain letters, numbers, hyphens, and underscores';
+          }
+          if (existsSync(input)) {
+            return `Directory "${input}" already exists. Please choose a different name.`;
+          }
+          return true;
+        },
       },
-    },
-    {
-      type: 'input',
-      name: 'cloudName',
-      message:
-        'What’s your Cloudinary cloud name?\n' +
-        chalk.gray(' → Find your cloud name: https://console.cloudinary.com/app/home/dashboard') + '\n',
-      validate: (input) => {
-        if (!input.trim()) {
-          return chalk.yellow(
-            'Cloud name is required.\n' +
-            ' → Sign up: https://cloudinary.com/users/register/free\n' +
-            ' → Find your cloud name: https://console.cloudinary.com/app/home/dashboard'
-          );
-        }
-        if (!isValidCloudName(input)) {
-          return 'Cloud name can only contain lowercase letters, numbers, hyphens, and underscores';
-        }
-        return true;
+      {
+        type: 'input',
+        name: 'cloudName',
+        message:
+          'What’s your Cloudinary cloud name?\n' +
+          chalk.gray(' → Find your cloud name: https://console.cloudinary.com/app/home/dashboard') + '\n',
+        validate: (input) => {
+          if (!input.trim()) {
+            return chalk.yellow(
+              'Cloud name is required.\n' +
+              ' → Sign up: https://cloudinary.com/users/register/free\n' +
+              ' → Find your cloud name: https://console.cloudinary.com/app/home/dashboard'
+            );
+          }
+          if (!isValidCloudName(input)) {
+            return 'Cloud name can only contain lowercase letters, numbers, hyphens, and underscores';
+          }
+          return true;
+        },
       },
-    },
-    {
-      type: 'confirm',
-      name: 'hasUploadPreset',
-      message:
-        'Do you have an unsigned upload preset?\n' +
-        chalk.gray(' → You’ll need one if you want to upload new images to Cloudinary,\n   but not if you only want to transform or deliver existing images.') + '\n' +
-        chalk.gray(' → Create one here: https://console.cloudinary.com/app/settings/upload/presets') + '\n',
-      default: false,
-    },
-    {
-      type: 'input',
-      name: 'uploadPreset',
-      message: 'What’s your unsigned upload preset’s name?\n',
-      when: (answers) => answers.hasUploadPreset,
-      validate: (input) => {
-        if (!input.trim()) {
-          return 'Upload preset name cannot be empty';
-        }
-        return true;
+      {
+        type: 'confirm',
+        name: 'hasUploadPreset',
+        message:
+          'Do you have an unsigned upload preset?\n' +
+          chalk.gray(' → You’ll need one if you want to upload new images to Cloudinary,\n   but not if you only want to transform or deliver existing images.') + '\n' +
+          chalk.gray(' → Create one here: https://console.cloudinary.com/app/settings/upload/presets') + '\n',
+        default: false,
       },
-    },
-    {
-      type: 'checkbox',
-      name: 'aiTools',
-      message: 'Which AI coding assistant(s) are you using? (Select all that apply)',
-      choices: [
-        { name: 'Cursor', value: 'cursor' },
-        { name: 'GitHub Copilot', value: 'copilot' },
-        { name: 'Claude Code / Claude Desktop', value: 'claude' },
-        { name: 'Other / Generic AI tools', value: 'generic' },
-      ],
-      default: ['cursor'],
-    },
-    {
-      type: 'confirm',
-      name: 'installDeps',
-      message: 'Install dependencies now?\n',
-      default: true,
-    },
-    {
-      type: 'confirm',
-      name: 'startDev',
-      message: 'Start development server?\n',
-      default: false,
-      when: (answers) => answers.installDeps,
-    },
-  ]);
+      {
+        type: 'input',
+        name: 'uploadPreset',
+        message: 'What’s your unsigned upload preset’s name?\n',
+        when: (answers) => answers.hasUploadPreset,
+        validate: (input) => {
+          if (!input.trim()) {
+            return 'Upload preset name cannot be empty';
+          }
+          return true;
+        },
+      },
+      {
+        type: 'checkbox',
+        name: 'aiTools',
+        message: 'Which AI coding assistant(s) are you using? (Select all that apply)',
+        choices: [
+          { name: 'Cursor', value: 'cursor' },
+          { name: 'GitHub Copilot', value: 'copilot' },
+          { name: 'Claude Code / Claude Desktop', value: 'claude' },
+          { name: 'Other / Generic AI tools', value: 'generic' },
+        ],
+        default: ['cursor'],
+      },
+      {
+        type: 'confirm',
+        name: 'installDeps',
+        message: 'Install dependencies now?\n',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'startDev',
+        message: 'Start development server?\n',
+        default: false,
+        when: (answers) => answers.installDeps,
+      },
+    ]);
+  }
 
   const { projectName, cloudName, uploadPreset, aiTools, installDeps, startDev } = answers;
 
