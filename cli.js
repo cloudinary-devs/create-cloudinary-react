@@ -64,7 +64,6 @@ async function main() {
         }
       }
     });
-    console.log(values)
     
     Object.assign(answers, values);
     
