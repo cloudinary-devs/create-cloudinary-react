@@ -1,3 +1,15 @@
+# [1.0.0-beta.12](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-02-02)
+
+
+### Bug Fixes
+
+* remove console.log ([369e92f](https://github.com/cloudinary-devs/create-cloudinary-react/commit/369e92f3cb3e5af633c1553380119d5a685ec506))
+
+
+### Features
+
+* non-interactive 'headless' mode ([4334991](https://github.com/cloudinary-devs/create-cloudinary-react/commit/4334991f99eddfb3ae2b017c977f9c69c0c500fd))
+
 # [1.0.0-beta.11](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-01-30)
 
 
