@@ -4,15 +4,15 @@
 
 ## Official Documentation
 - **Transformation Rules**: https://cloudinary.com/documentation/cloudinary_transformation_rules.md
-- **Transformation Reference**: https://cloudinary.com/documentation/transformation_reference
-- **React Image Transformations & Plugins**: https://cloudinary.com/documentation/react_image_transformations#plugins
-- **React Video Transformations**: https://cloudinary.com/documentation/react_video_transformations
-- **Cloudinary Video Player** (standalone player): https://cloudinary.com/documentation/cloudinary_video_player
-- **Video Player React Tutorial**: https://cloudinary.com/documentation/video_player_react_tutorial#banner
-- **Upload Widget (signed uploads)**: https://cloudinary.com/documentation/upload_widget#signed_uploads
-- **Upload assets in Next.js (backend signature)**: https://cloudinary.com/documentation/upload_assets_in_nextjs_tutorial
-- **Cloudinary Node.js SDK (server-side signing)** — use **v2**: `import { v2 as cloudinary } from 'cloudinary'`; do not use v1 (e.g. 1.47.0). https://cloudinary.com/documentation/node_integration
-- **React Native image and video upload (signed)**: https://cloudinary.com/documentation/react_native_image_and_video_upload#signed_upload
+- **Transformation Reference**: https://cloudinary.com/documentation/transformation_reference.md
+- **React Image Transformations & Plugins**: https://cloudinary.com/documentation/react_image_transformations.md#plugins
+- **React Video Transformations**: https://cloudinary.com/documentation/react_video_transformations.md
+- **Cloudinary Video Player** (standalone player): https://cloudinary.com/documentation/cloudinary_video_player.md
+- **Video Player React Tutorial**: https://cloudinary.com/documentation/video_player_react_tutorial.md
+- **Upload Widget (signed uploads)**: https://cloudinary.com/documentation/upload_widget.md#signed_uploads
+- **Upload assets in Next.js (backend signature)**: https://cloudinary.com/documentation/upload_assets_in_nextjs_tutorial.md
+- **Cloudinary Node.js SDK (server-side signing)** — use **v2**: `import { v2 as cloudinary } from 'cloudinary'`; do not use v1 (e.g. 1.47.0). https://cloudinary.com/documentation/node_integration.md
+- **React Native image and video upload (signed)**: https://cloudinary.com/documentation/react_native_image_and_video_upload.md#signed_upload
 - Always consult the official transformation rules when creating transformations
 - Use only officially supported parameters from the transformation reference
 
@@ -141,7 +141,7 @@ cld.image('id').overlay(
 
 // Image overlay (logo/image with resize)
 cld.image('id').overlay(
-  source(image('logo').transformation(new Transformation().resize(scale().width(100).height(100))))
+  source(image('logo').transformation(new Transformation().resize(scale().width(100))))
     .position(new Position().gravity(compass('south_east')).offsetX(20).offsetY(20))
 );
 ```
@@ -192,7 +192,7 @@ cld.image('id').overlay(
 
 ### Transformation Best Practices
 - ✅ Format and quality must use separate `.delivery()` calls
-- ✅ Always end with auto format/quality: `.delivery(format(auto())).delivery(quality(autoQuality()))`
+- ✅ Always end with auto format/quality: `.delivery(format(auto())).delivery(quality(autoQuality()))` unless user specifies a particular format or quality
 - ✅ Use `gravity(auto())` unless user specifies a focal point
 - ✅ Same transformation syntax works for both images and videos
 
@@ -241,10 +241,10 @@ cld.image('id').overlay(
 - ✅ **When the user asks for image overlays with text or logos**: Use `@cloudinary/url-gen` overlay APIs. Copy imports and patterns from the **"Import reference"** table and **"Canonical overlay block"** in these rules. Do not import `text` or `image` from `actions/overlay` — they are from **`qualifiers/source`**; only `source` is from `actions/overlay`.
 - ✅ **Import** `source` from `actions/overlay`; **`text` and `image` from `qualifiers/source`**. Also: `Position` from `qualifiers/position`, `TextStyle` from `qualifiers/textStyle`, `compass` from `qualifiers/gravity`, `Transformation` from `transformation/Transformation`, `scale` from `actions/resize`.
 - ✅ **compass()** takes **string** values, with **underscores**: `compass('center')`, `compass('south_east')`, `compass('north_west')`. ❌ WRONG: `compass(southEast)` or `'southEast'` (no camelCase).
-- ✅ **Overlay image**: Use `new Transformation()` **inside** `.transformation()`: `image('logo').transformation(new Transformation().resize(scale().width(100).height(100)))`. ❌ WRONG: `image('logo').transformation().resize(...)` (`.transformation()` does not return a chainable object).
+- ✅ **Overlay image**: Use `new Transformation()` **inside** `.transformation()`: `image('logo').transformation(new Transformation().resize(scale().width(100)))`. ❌ WRONG: `image('logo').transformation().resize(...)` (`.transformation()` does not return a chainable object).
 - ✅ **Text overlay**: `fontWeight` goes on **TextStyle**: `new TextStyle('Arial', 60).fontWeight('bold')`. `textColor` goes on the **text source** (chained after `text(...)`): `text('Hello', new TextStyle('Arial', 60)).textColor('white')`.
 - ✅ **Position** is chained **after** `source(...)`, not inside: `source(image('logo').transformation(...)).position(new Position().gravity(compass('south_east')).offsetX(20).offsetY(20))`.
-- ✅ **Image overlay pattern**: `baseImage.overlay(source(image('id').transformation(new Transformation().resize(scale().width(100).height(100)))).position(new Position().gravity(compass('south_east')).offsetX(20).offsetY(20)))`. (Import `scale` from `@cloudinary/url-gen/actions/resize` if needed.)
+- ✅ **Image overlay pattern**: `baseImage.overlay(source(image('id').transformation(new Transformation().resize(scale().width(100)))).position(new Position().gravity(compass('south_east')).offsetX(20).offsetY(20)))`. (Import `scale` from `@cloudinary/url-gen/actions/resize` if needed.)
 - ✅ **Text overlay pattern**: `baseImage.overlay(source(text('Your Text', new TextStyle('Arial', 60).fontWeight('bold')).textColor('white')).position(new Position().gravity(compass('center'))))`.
 - ✅ Docs: React Image Transformations and transformation reference for overlay syntax.
 
@@ -343,7 +343,7 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
 ```
 
 - ❌ **Avoid `signatureEndpoint`** — it may not be called reliably by all widget versions. Prefer the `uploadSignature` function.
-- ✅ Docs: [Upload widget — signed uploads](https://cloudinary.com/documentation/upload_widget#signed_uploads), [Upload assets in Next.js](https://cloudinary.com/documentation/upload_assets_in_nextjs_tutorial).
+- ✅ Docs: [Upload widget — signed uploads](https://cloudinary.com/documentation/upload_widget.md#signed_uploads), [Upload assets in Next.js](https://cloudinary.com/documentation/upload_assets_in_nextjs_tutorial.md).
 
 ### Rules for secure uploads
 - ✅ Use a **signed** upload preset (dashboard → Upload presets → Signed). Do not use an unsigned preset when the user wants secure uploads. **Default:** Accounts have a built-in signed preset `ml_default` — use it if the user hasn't created their own (they can delete `ml_default`, in which case they must create a signed preset in the dashboard).
@@ -400,7 +400,7 @@ res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CL
     muted
   />
   ```
-- ✅ **Documentation**: https://cloudinary.com/documentation/react_video_transformations
+- ✅ **Documentation**: https://cloudinary.com/documentation/react_video_transformations.md
 
 ### Cloudinary Video Player (The Player)
 Use when the user asks for a **video player** (styled UI, controls, playlists). For just **displaying** a video, use AdvancedVideo instead.
@@ -437,7 +437,7 @@ useLayoutEffect(() => {
 }, [cloudName]);
 return <div ref={containerRef} />;
 ```
-Docs: https://cloudinary.com/documentation/cloudinary_video_player
+Docs: https://cloudinary.com/documentation/cloudinary_video_player.md
 
 ### When to Use Which?
 - ✅ **Use AdvancedVideo** when: User wants to **display** or **show** a video (no full player). It just displays a video with transformations.
@@ -548,8 +548,8 @@ Docs: https://cloudinary.com/documentation/cloudinary_video_player
   ```
 
 ## Best Practices
-- ✅ Always use `fill()` resize for responsive images
-- ✅ Always end transformations with `.delivery(format(auto())).delivery(quality(autoQuality()))`
+- ✅ Always use `fill()` resize with automatic gravity for responsive images
+- ✅ Always end transformations with `.delivery(format(auto())).delivery(quality(autoQuality()))` unless the user specifies a format or quality
 - ✅ Use `placeholder()` and `lazyload()` plugins together
 - ✅ Always add `width` and `height` attributes to `AdvancedImage`
 - ✅ Store `public_id` from upload success, not full URL

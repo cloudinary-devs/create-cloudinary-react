@@ -4,6 +4,7 @@ import { fill } from '@cloudinary/url-gen/actions/resize';
 import { format, quality } from '@cloudinary/url-gen/actions/delivery';
 import { auto } from '@cloudinary/url-gen/qualifiers/format';
 import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality';
+import { autoGravity } from '@cloudinary/url-gen/qualifiers/gravity';
 import { cld } from './cloudinary/config';
 import { UploadWidget } from './cloudinary/UploadWidget';
 import './App.css';
@@ -26,7 +27,7 @@ function App() {
   
   const displayImage = cld
     .image(imageId)
-    .resize(fill().width(600).height(400))
+    .resize(fill().width(600).height(400).gravity(autoGravity()))
     .delivery(format(auto()))
     .delivery(quality(autoQuality()));
 
