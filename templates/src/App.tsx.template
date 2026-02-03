@@ -61,7 +61,9 @@ function App() {
 
         <div className="ai-prompts-section">
           <h2>🤖 Try Asking Your AI Assistant</h2>
-          <p className="prompts-intro">Ping your agent with one of these to get started:</p>
+          <p className="prompts-intro">
+            <strong>Copy and paste</strong> one of these prompts into your AI assistant:
+          </p>
           <ul className="prompts-list">
             <li>Create an image gallery with lazy loading and responsive</li>
             <li>Create a video player that plays a Cloudinary video</li>

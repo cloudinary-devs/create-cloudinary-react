@@ -26,7 +26,7 @@ Your `.env` file has been pre-configured with:
 
 **Note**: Transformations work without an upload preset (using sample images). Uploads require an unsigned upload preset.
 
-To create an upload preset:
+To create an unsigned upload preset:
 1. Go to https://console.cloudinary.com/app/settings/upload/presets
 2. Click "Add upload preset"
 3. Set it to "Unsigned" mode
@@ -37,7 +37,7 @@ To create an upload preset:
 
 This project includes AI coding rules for your selected AI assistant(s). The rules help AI assistants understand Cloudinary React SDK patterns, common errors, and best practices.
 
-**Try the AI Prompts**: Check out the "🤖 Try Asking Your AI Assistant" section in the app for ready-to-use Cloudinary prompts to get started!
+**Try the AI Prompts**: Check out the "🤖 Try Asking Your AI Assistant" section in the app for ready-to-use Cloudinary prompts! Copy and paste them into your AI assistant to get started.
 
 ## Learn More
 

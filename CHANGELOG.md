@@ -1,3 +1,10 @@
+# [1.0.0-beta.13](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-02-03)
+
+
+### Features
+
+* simplify AI prompts section with clear copy-paste instructions ([2b60415](https://github.com/cloudinary-devs/create-cloudinary-react/commit/2b60415c1d3e23aabbe95b2c5366078857a5b37c))
+
 # [1.0.0-beta.12](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-02-02)
 
 

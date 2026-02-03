@@ -61,8 +61,13 @@ h2 {
 
 .prompts-intro {
   margin: 0.5rem 0 1rem 0;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.9);
   text-align: center;
+  font-size: 1rem;
+}
+
+.prompts-intro strong {
+  color: rgba(99, 102, 241, 1);
 }
 
 .prompts-list {
@@ -84,7 +89,8 @@ h2 {
   color: rgba(255, 255, 255, 0.9);
   font-size: 0.9rem;
   transition: all 0.2s;
-  cursor: pointer;
+  user-select: text;
+  cursor: text;
 }
 
 .prompts-list li:hover {
