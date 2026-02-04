@@ -1,3 +1,10 @@
+# [1.0.0-beta.14](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-02-04)
+
+
+### Bug Fixes
+
+* improve upload widget reliability and add video player poster options ([ac51e42](https://github.com/cloudinary-devs/create-cloudinary-react/commit/ac51e420f1b81f2a055bb3fb7e0331841e86b37a))
+
 # [1.0.0-beta.13](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-02-03)
 
 
