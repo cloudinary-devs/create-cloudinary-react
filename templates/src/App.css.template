@@ -90,7 +90,7 @@ h2 {
   font-size: 0.9rem;
   transition: all 0.2s;
   user-select: text;
-  cursor: text;
+  cursor: pointer;
 }
 
 .prompts-list li:hover {

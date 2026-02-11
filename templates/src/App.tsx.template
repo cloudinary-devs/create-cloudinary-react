@@ -25,6 +25,11 @@ function App() {
     alert(`Upload failed: ${error.message}`);
   };
 
+  const copyPrompt = (e: React.MouseEvent<HTMLLIElement>) => {
+    const text = e.currentTarget.textContent ?? '';
+    void navigator.clipboard.writeText(text);
+  };
+
   // Display uploaded image if available, otherwise show a sample
   const imageId = uploadedImageId || 'samples/people/bicycle';
   
@@ -72,16 +77,16 @@ function App() {
           <ul className="prompts-list">
             {hasUploadPreset ? (
               <>
-                <li>Create an image gallery with lazy loading and responsive images</li>
-                <li>Create a video player that plays a Cloudinary video</li>
-                <li>Add image overlays with text or logos</li>
+                <li onClick={copyPrompt} title="Click to copy">Create an image gallery with lazy loading and responsive images</li>
+                <li onClick={copyPrompt} title="Click to copy">Create a video player that plays a Cloudinary video</li>
+                <li onClick={copyPrompt} title="Click to copy">Add image overlays with text or logos</li>
               </>
             ) : (
               <>
-                <li>Let&apos;s try uploading — help me add an upload preset and upload widget</li>
-                <li>Create an image gallery with lazy loading and responsive images</li>
-                <li>Create a video player that plays a Cloudinary video</li>
-                <li>Add image overlays with text or logos</li>
+                <li onClick={copyPrompt} title="Click to copy">Let&apos;s try uploading — help me add an upload preset and upload widget</li>
+                <li onClick={copyPrompt} title="Click to copy">Create an image gallery with lazy loading and responsive images</li>
+                <li onClick={copyPrompt} title="Click to copy">Create a video player that plays a Cloudinary video</li>
+                <li onClick={copyPrompt} title="Click to copy">Add image overlays with text or logos</li>
               </>
             )}
           </ul>
