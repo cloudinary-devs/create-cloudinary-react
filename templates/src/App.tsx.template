@@ -25,11 +25,21 @@ const PROMPTS_WITHOUT_UPLOAD = [
 
 function App() {
   const [uploadedImageId, setUploadedImageId] = useState<string | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [clickedIds, setClickedIds] = useState(new Set<number>());
 
   const handleUploadSuccess = (result: CloudinaryUploadResult) => {
     console.log('Upload successful:', result);
+    // result contains everything you need to work with the uploaded asset:
+    //   result.public_id   — Cloudinary asset ID (use with cld.image() for transformations)
+    //   result.secure_url  — direct HTTPS URL to the original file
+    //   result.url         — HTTP URL (prefer secure_url)
+    //   result.width / result.height — image dimensions
+    //   result.format      — file format (e.g. 'jpg', 'png', 'webp')
+    //   result.bytes       — file size in bytes
+    //   result.resource_type — 'image', 'video', or 'raw'
     setUploadedImageId(result.public_id);
+    setUploadedUrl(result.secure_url); // store the URL to use anywhere in your app
   };
 
   const handleUploadError = (error: Error) => {
@@ -84,6 +94,14 @@ function App() {
           />
           {uploadedImageId && (
             <p className="image-info">Public ID: {uploadedImageId}</p>
+          )}
+          {uploadedUrl && (
+            <p className="image-info">
+              URL:{' '}
+              <a href={uploadedUrl} target="_blank" rel="noopener noreferrer">
+                {uploadedUrl}
+              </a>
+            </p>
           )}
         </div>
 
