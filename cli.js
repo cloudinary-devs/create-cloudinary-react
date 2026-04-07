@@ -14,6 +14,52 @@ const __dirname = dirname(__filename);
 
 const TEMPLATES_DIR = join(__dirname, 'templates');
 
+/** Package managers we know how to drive for install / dev scripts */
+const SUPPORTED_PACKAGE_MANAGERS = new Set(['npm', 'pnpm', 'yarn', 'bun']);
+
+/**
+ * Parse npm_config_user_agent (set by npm, pnpm, yarn, bun when they run a package).
+ * Same approach as create-vite: first space-separated segment is "name/version".
+ */
+function pkgFromUserAgent(userAgent) {
+  if (!userAgent) return undefined;
+  const pkgSpec = userAgent.split(' ')[0];
+  const [name, version = ''] = pkgSpec.split('/');
+  if (!name) return undefined;
+  return { name, version };
+}
+
+function detectPackageManager() {
+  const pkg = pkgFromUserAgent(process.env.npm_config_user_agent);
+  if (pkg && SUPPORTED_PACKAGE_MANAGERS.has(pkg.name)) {
+    return pkg.name;
+  }
+  return 'npm';
+}
+
+function getInstallCommand(packageManager) {
+  if (packageManager === 'yarn') {
+    return ['yarn'];
+  }
+  return [packageManager, 'install'];
+}
+
+function getRunDevCommand(packageManager) {
+  switch (packageManager) {
+    case 'yarn':
+    case 'pnpm':
+    case 'bun':
+      return [packageManager, 'dev'];
+    default:
+      return ['npm', 'run', 'dev'];
+  }
+}
+
+function runPackageManagerCommand(args, cwd) {
+  const quoted = args.map((arg) => (/[\s"'\\]/.test(arg) ? JSON.stringify(arg) : arg));
+  execSync(quoted.join(' '), { stdio: 'inherit', cwd, shell: true });
+}
+
 // Validate cloud name format
 function isValidCloudName(name) {
   return /^[a-z0-9_-]+$/.test(name) && name.length > 0;
@@ -61,8 +107,12 @@ async function main() {
         startDev: {
           type: 'boolean',
           default: false
-        }
-      }
+        },
+        packageManager: {
+          type: 'string',
+        },
+      },
+      allowPositionals: true,
     });
     
     Object.assign(answers, values);
@@ -165,6 +215,17 @@ async function main() {
   }
 
   const { projectName, cloudName, uploadPreset, aiTools, installDeps, startDev } = answers;
+
+  let packageManager = answers.packageManager;
+  if (packageManager && !SUPPORTED_PACKAGE_MANAGERS.has(packageManager)) {
+    console.warn(
+      chalk.yellow(
+        `Unknown package manager "${packageManager}". Use npm, pnpm, yarn, or bun. Falling back to auto-detect.`
+      )
+    );
+    packageManager = undefined;
+  }
+  packageManager = packageManager || detectPackageManager();
 
   console.log(chalk.blue('\n📦 Creating project...\n'));
 
@@ -311,34 +372,38 @@ async function main() {
     console.log(chalk.cyan('   5. Save the file and restart the dev server so it loads correctly\n'));
   }
 
+  const installCmd = getInstallCommand(packageManager);
+  const devCmd = getRunDevCommand(packageManager);
+  const installCmdStr = installCmd.join(' ');
+  const devCmdStr = devCmd.join(' ');
+
   if (installDeps) {
-    console.log(chalk.blue('📦 Installing dependencies...\n'));
+    console.log(chalk.blue(`📦 Installing dependencies with ${packageManager}...\n`));
     try {
-      process.chdir(projectPath);
-      execSync('npm install', { stdio: 'inherit' });
+      runPackageManagerCommand(installCmd, projectPath);
       console.log(chalk.green('\n✅ Dependencies installed!\n'));
 
       if (startDev) {
         console.log(chalk.blue('🚀 Starting development server...\n'));
-        execSync('npm run dev', { stdio: 'inherit' });
+        runPackageManagerCommand(devCmd, projectPath);
       } else {
         console.log(chalk.cyan(`\n📁 Project created at: ${projectPath}`));
         console.log(chalk.cyan(`\nNext steps:`));
         console.log(chalk.cyan(`  cd ${projectName}`));
-        console.log(chalk.cyan(`  npm run dev\n`));
+        console.log(chalk.cyan(`  ${devCmdStr}\n`));
       }
     } catch (error) {
       console.error(chalk.red('\n❌ Error installing dependencies:'), error.message);
       console.log(chalk.cyan(`\nYou can install manually:`));
       console.log(chalk.cyan(`  cd ${projectName}`));
-      console.log(chalk.cyan(`  npm install\n`));
+      console.log(chalk.cyan(`  ${installCmdStr}\n`));
     }
   } else {
     console.log(chalk.cyan(`\n📁 Project created at: ${projectPath}`));
     console.log(chalk.cyan(`\nNext steps:`));
     console.log(chalk.cyan(`  cd ${projectName}`));
-    console.log(chalk.cyan(`  npm install`));
-    console.log(chalk.cyan(`  npm run dev\n`));
+    console.log(chalk.cyan(`  ${installCmdStr}`));
+    console.log(chalk.cyan(`  ${devCmdStr}\n`));
   }
 }
 
