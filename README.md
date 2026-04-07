@@ -8,7 +8,7 @@
 
 Scaffold a modern, production-ready Cloudinary application with React 19, Vite 6, and TypeScript 5. Features interactive setup, automatic environment configuration, and built-in AI coding assistance.
 
-- **Node.js 20.19+** or **22.12+** (required by `@vitejs/plugin-react` 5.x with Vite 6)
+- **Node.js** — use a [current LTS](https://nodejs.org/) release. The generated app lists supported versions under `engines` in its `package.json`.
 - A Cloudinary account (free tier available)
   - [Sign up for free](https://cld.media/reactregister)
   - Your cloud name is in your [dashboard](https://console.cloudinary.com/app/home/dashboard)
@@ -36,7 +36,7 @@ Part of the [Cloudinary Developers](https://github.com/cloudinary-devs) organiza
   
 ## 🚀 Quick Start
 
-Ensure you have **Node.js 20.19+** or **22.12+** installed (see prerequisites above).
+Use a current **Node.js LTS** release. If installs fail, match the `engines` range in the generated project’s `package.json`.
 
 ```bash
 npx create-cloudinary-react
@@ -80,7 +80,7 @@ During setup, select your AI tool to generate **Context Rules**. These rules tea
 
 ## 📋 Prerequisites
 
-- **Node.js 18+**
+- **Node.js** — LTS recommended; exact ranges for the scaffolded app are in `package.json` → `engines`.
 - **Cloudinary Account**: [Sign up for free](https://cloudinary.com/users/register/free) if you haven't already.
 
 ## 🤝 Contributing
