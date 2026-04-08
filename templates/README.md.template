@@ -2,6 +2,10 @@
 
 A Cloudinary React + Vite + TypeScript project scaffolded with [create-cloudinary-react](https://github.com/cloudinary-devs/create-cloudinary-react).
 
+## Prerequisites
+
+- **Node.js** — use a current LTS release. Supported ranges are listed under `engines` in this `package.json`.
+
 ## Quick Start
 
 ```bash
