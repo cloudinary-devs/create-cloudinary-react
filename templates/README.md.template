@@ -4,7 +4,7 @@ A Cloudinary React + Vite + TypeScript project scaffolded with [create-cloudinar
 
 ## Prerequisites
 
-- **Node.js** `^20.19.0` or `>=22.12.0` (matches `@vitejs/plugin-react` 5.x)
+- **Node.js** — use a current LTS release. Supported ranges are listed under `engines` in this `package.json`.
 
 ## Quick Start
 

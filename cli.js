@@ -3,7 +3,7 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import fs from 'fs-extra';
@@ -29,6 +29,12 @@ function pkgFromUserAgent(userAgent) {
   return { name, version };
 }
 
+/**
+ * Resolve which client to run for install / dev.
+ * Only npm, pnpm, yarn, and bun have explicit command mappings below; anything else
+ * (missing env, exotic clients, parse quirks) falls back to npm as the safe default that
+ * ships with Node and matches the install instructions most users expect.
+ */
 function detectPackageManager() {
   const pkg = pkgFromUserAgent(process.env.npm_config_user_agent);
   if (pkg && SUPPORTED_PACKAGE_MANAGERS.has(pkg.name)) {
@@ -56,8 +62,14 @@ function getRunDevCommand(packageManager) {
 }
 
 function runPackageManagerCommand(args, cwd) {
-  const quoted = args.map((arg) => (/[\s"'\\]/.test(arg) ? JSON.stringify(arg) : arg));
-  execSync(quoted.join(' '), { stdio: 'inherit', cwd, shell: true });
+  const [command, ...cmdArgs] = args;
+  const result = spawnSync(command, cmdArgs, { stdio: 'inherit', cwd, shell: false });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`Command failed: ${args.join(' ')}`);
+  }
 }
 
 // Validate cloud name format
@@ -220,7 +232,7 @@ async function main() {
   if (packageManager && !SUPPORTED_PACKAGE_MANAGERS.has(packageManager)) {
     console.warn(
       chalk.yellow(
-        `Unknown package manager "${packageManager}". Use npm, pnpm, yarn, or bun. Falling back to auto-detect.`
+        `Unknown package manager "${packageManager}". Use npm, pnpm, yarn, or bun. Ignoring --packageManager; using npm_config_user_agent when it names a supported client, otherwise npm.`
       )
     );
     packageManager = undefined;
