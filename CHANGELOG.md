@@ -1,3 +1,13 @@
+# [1.0.0-beta.22](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.21...v1.0.0-beta.22) (2026-04-08)
+
+
+### Bug Fixes
+
+* add comments ([5dd6f00](https://github.com/cloudinary-devs/create-cloudinary-react/commit/5dd6f002d514d5e488eb1fcf8e9f003fa09fc22c))
+* comment and render secure url after upload ([4061546](https://github.com/cloudinary-devs/create-cloudinary-react/commit/40615464f260693a1f9a5f6b7ceca3c10456bbe6))
+* detect invoking package manager ([8e3547c](https://github.com/cloudinary-devs/create-cloudinary-react/commit/8e3547c9b97b1c806dacf853a0764d5fe9e36b9e))
+* version in readme ([0325e1b](https://github.com/cloudinary-devs/create-cloudinary-react/commit/0325e1be42db7e042710a6249f72ca4a6738bd4d))
+
 # [1.0.0-beta.21](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.20...v1.0.0-beta.21) (2026-02-25)
 
 
