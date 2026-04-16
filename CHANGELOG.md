@@ -1,3 +1,10 @@
+# [1.0.0-beta.23](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.22...v1.0.0-beta.23) (2026-04-16)
+
+
+### Features
+
+* improve CLI UX with enhanced post-scaffold guidance and clearer prompts ([a066c31](https://github.com/cloudinary-devs/create-cloudinary-react/commit/a066c3106d14325aeacb3676e074ee66a246f67d))
+
 # [1.0.0-beta.22](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.21...v1.0.0-beta.22) (2026-04-08)
 
 
