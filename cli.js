@@ -178,8 +178,9 @@ async function main() {
         name: 'hasUploadPreset',
         message:
           'Do you have an unsigned upload preset?\n' +
-          chalk.gray(' → You’ll need one if you want to upload new images to Cloudinary,\n   but not if you only want to transform or deliver existing images.') + '\n' +
-          chalk.gray(' → Create one here: https://console.cloudinary.com/app/settings/upload/presets') + '\n',
+          chalk.gray(' → An unsigned upload preset allows users to upload files directly from your app.') + '\n' +
+          chalk.gray(' → Create one here: https://console.cloudinary.com/app/settings/upload/presets') + '\n' +
+          chalk.gray('   (Set signing mode to "Unsigned" when creating)\n'),
         default: false,
       },
       {
@@ -362,19 +363,30 @@ async function main() {
   console.log(chalk.green('✅ Project created successfully!\n'));
 
   if (aiTools && aiTools.length > 0) {
-    console.log(chalk.cyan('📋 AI assistant files created:'));
+    // Count actual files created
+    let fileCount = 0;
+    if (aiTools.includes('cursor')) fileCount += 2; // .cursorrules + mcp.json
+    if (aiTools.includes('copilot')) fileCount += 1;
+    if (aiTools.includes('claude')) fileCount += 2; // CLAUDE.md + .mcp.json
+    if (aiTools.includes('generic')) fileCount += 2; // AI_INSTRUCTIONS.md + PROMPT.md
+    
+    const filesText = fileCount === 1 ? 'file' : 'files';
+    console.log(chalk.cyan(`📋 AI assistant configuration ${filesText} created:`));
     if (aiTools.includes('cursor')) console.log(chalk.gray('   • Cursor: .cursorrules'));
     if (aiTools.includes('copilot')) console.log(chalk.gray('   • GitHub Copilot: .github/copilot-instructions.md'));
     if (aiTools.includes('claude')) console.log(chalk.gray('   • Claude: CLAUDE.md'));
     if (aiTools.includes('generic')) console.log(chalk.gray('   • Generic: AI_INSTRUCTIONS.md, PROMPT.md'));
     if (aiTools.includes('cursor')) console.log(chalk.gray('   • MCP (Cursor): .cursor/mcp.json'));
     if (aiTools.includes('claude')) console.log(chalk.gray('   • MCP (Claude Code): .mcp.json'));
-    console.log('');
+    console.log(chalk.gray(`\n   ${fileCount === 1 ? 'This file teaches' : 'These files teach'} your AI assistant about Cloudinary patterns and best practices.`));
+    console.log(chalk.gray(`\n   💡 How to use ${fileCount === 1 ? 'this file' : 'these files'}:`));
+    console.log(chalk.gray('   • Simply open your project in your AI assistant - the configuration is already loaded'));
+    console.log(chalk.gray('   • Ask your AI to help build Cloudinary features, and it will follow these patterns'));
+    console.log(chalk.gray('   • Example prompts: "Add image upload", "Create a transformation gallery"\n'));
   }
 
   if (!answers.hasUploadPreset) {
     console.log(chalk.yellow('\n📝 Note: Upload preset not configured'));
-    console.log(chalk.gray('   • Transformations will work with sample images'));
     console.log(chalk.gray('   • Uploads require an unsigned upload preset'));
     console.log(chalk.cyan('\n   To enable uploads:'));
     console.log(chalk.cyan('   1. Go to https://console.cloudinary.com/app/settings/upload/presets'));
@@ -397,12 +409,33 @@ async function main() {
 
       if (startDev) {
         console.log(chalk.blue('🚀 Starting development server...\n'));
+        console.log(chalk.cyan.bold('━'.repeat(60)));
+        console.log(chalk.cyan.bold('🎉 Your Cloudinary React app is now running!\n'));
+        console.log(chalk.white('Next steps:'));
+        console.log(chalk.gray('  1. Open your browser and navigate to the URL shown below'));
+        console.log(chalk.gray('  2. Check out the generated AI context files for helpful prompts'));
+        console.log(chalk.gray('  3. Start building! Try asking your AI assistant:'));
+        console.log(chalk.green('     → "Add an image upload feature"'));
+        console.log(chalk.green('     → "Create a gallery with transformations"'));
+        console.log(chalk.green('     → "Add image optimization"\n'));
+        console.log(chalk.cyan.bold('━'.repeat(60) + '\n'));
         runPackageManagerCommand(devCmd, projectPath);
       } else {
-        console.log(chalk.cyan(`\n📁 Project created at: ${projectPath}`));
-        console.log(chalk.cyan(`\nNext steps:`));
-        console.log(chalk.cyan(`  cd ${projectName}`));
-        console.log(chalk.cyan(`  ${devCmdStr}\n`));
+        console.log(chalk.cyan.bold('━'.repeat(60)));
+        console.log(chalk.cyan.bold('🎉 Setup complete! Your Cloudinary React app is ready.\n'));
+        console.log(chalk.white(`📁 Project location: ${projectPath}\n`));
+        console.log(chalk.white('Next steps:'));
+        console.log(chalk.cyan(`  1. cd ${projectName}`));
+        console.log(chalk.cyan(`  2. ${devCmdStr}`));
+        console.log(chalk.gray(`  3. Open your browser to the URL shown by the dev server\n`));
+        console.log(chalk.white('What you can do now:'));
+        console.log(chalk.gray('  • Open the app in your browser and see the Cloudinary features being used'));
+        console.log(chalk.gray('  • Explore the code in src/cloudinary/ to see how it works'));
+        console.log(chalk.gray('  • Ask your AI assistant to add features using example prompts:\n'));
+        console.log(chalk.green('    → "Add an image gallery with transformations"'));
+        console.log(chalk.green('    → "Add a video player component"'));
+        console.log(chalk.green('    → "Implement image optimization"\n'));
+        console.log(chalk.cyan.bold('━'.repeat(60) + '\n'));
       }
     } catch (error) {
       console.error(chalk.red('\n❌ Error installing dependencies:'), error.message);
@@ -411,11 +444,22 @@ async function main() {
       console.log(chalk.cyan(`  ${installCmdStr}\n`));
     }
   } else {
-    console.log(chalk.cyan(`\n📁 Project created at: ${projectPath}`));
-    console.log(chalk.cyan(`\nNext steps:`));
-    console.log(chalk.cyan(`  cd ${projectName}`));
-    console.log(chalk.cyan(`  ${installCmdStr}`));
-    console.log(chalk.cyan(`  ${devCmdStr}\n`));
+    console.log(chalk.cyan.bold('━'.repeat(60)));
+    console.log(chalk.cyan.bold('🎉 Setup complete! Your Cloudinary React app is ready.\n'));
+    console.log(chalk.white(`📁 Project location: ${projectPath}\n`));
+    console.log(chalk.white('Next steps:'));
+    console.log(chalk.cyan(`  1. cd ${projectName}`));
+    console.log(chalk.cyan(`  2. ${installCmdStr}`));
+    console.log(chalk.cyan(`  3. ${devCmdStr}`));
+    console.log(chalk.gray(`  4. Open your browser to the URL shown by the dev server\n`));
+    console.log(chalk.white('What you can do after setup:'));
+    console.log(chalk.gray('  • Open the app in your browser and see the Cloudinary features being used'));
+    console.log(chalk.gray('  • Explore the code in src/cloudinary/ to see how it works'));
+    console.log(chalk.gray('  • Ask your AI assistant to add features using example prompts:\n'));
+    console.log(chalk.green('    → "Add an image gallery with transformations"'));
+    console.log(chalk.green('    → "Add a video player component"'));
+    console.log(chalk.green('    → "Implement image optimization"\n'));
+    console.log(chalk.cyan.bold('━'.repeat(60) + '\n'));
   }
 }
 
