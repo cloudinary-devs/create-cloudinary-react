@@ -107,7 +107,6 @@ async function main() {
       }));
     } catch (e) {
       console.error(chalk.red(`Error: ${e.message}`));
-      console.error(chalk.gray('Tip: If a flag value starts with a dash, use --flag=value syntax (e.g., --cloudName=-myvalue)'));
       process.exit(1);
     }
 
@@ -115,9 +114,7 @@ async function main() {
 
     const errors = [];
 
-    if (!values.projectName) {
-      errors.push('--projectName is required');
-    } else if (!isValidProjectName(values.projectName)) {
+    if (!isValidProjectName(values.projectName)) {
       errors.push('--projectName can only contain letters, numbers, hyphens, and underscores');
     } else if (existsSync(values.projectName)) {
       errors.push(`Directory "${values.projectName}" already exists. Please choose a different name.`);

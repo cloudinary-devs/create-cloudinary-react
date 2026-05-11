@@ -54,7 +54,7 @@ The CLI will guide you through:
 For CI/CD pipelines, scripts, or automated workflows, pass `--headless` along with all options as flags to skip the interactive prompts:
 
 ```bash
-npx create-cloudinary-react -- --headless \
+npx create-cloudinary-react --headless \
   --cloudName your-cloud-name \
   --projectName my-app
 ```
@@ -72,7 +72,7 @@ npx create-cloudinary-react -- --headless \
 | `--startDev` | boolean | `false` | Start the dev server after install |
 | `--packageManager` | string | *(auto-detected)* | `npm`, `pnpm`, `yarn`, or `bun` |
 
-> **Note:** If a flag value starts with a dash, use `--flag=value` syntax (e.g. `--cloudName=-myvalue`). Shell variables should be quoted: `--cloudName "$CLOUD_NAME"`.
+> **Note:** Shell variables should be quoted to prevent unexpected expansion: `--cloudName "$CLOUD_NAME"`.
 
 ## 🛠️ What's Included
 
