@@ -49,6 +49,31 @@ The CLI will guide you through:
 3.  **Upload Preset** (Optional): handling unsigned uploads
 4.  **AI Assistant**: generating custom rules for your tool of choice (Cursor, VS Code, etc.)
 
+## ⚙️ Headless Mode
+
+For CI/CD pipelines, scripts, or automated workflows, pass `--headless` along with all options as flags to skip the interactive prompts:
+
+```bash
+npx create-cloudinary-react --headless \
+  --cloudName your-cloud-name \
+  --projectName my-app
+```
+
+**All options:**
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--cloudName` | string | *(required)* | Your Cloudinary cloud name |
+| `--projectName` | string | `my-cloudinary-app` | Output directory name |
+| `--hasUploadPreset` | boolean | `false` | Set if you have an unsigned upload preset |
+| `--uploadPreset` | string | — | Your unsigned upload preset name (required if `--hasUploadPreset`) |
+| `--aiTools` | string (repeatable) | `cursor` | AI tools to configure: `cursor`, `copilot`, `claude`, `generic` |
+| `--installDeps` | boolean | `true` | Install dependencies after scaffolding |
+| `--startDev` | boolean | `false` | Start the dev server after install |
+| `--packageManager` | string | *(auto-detected)* | `npm`, `pnpm`, `yarn`, or `bun` |
+
+> **Note:** Shell variables should be quoted to prevent unexpected expansion: `--cloudName "$CLOUD_NAME"`.
+
 ## 🛠️ What's Included
 
 Your new project comes with:

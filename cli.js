@@ -88,47 +88,55 @@ async function main() {
   
   if (process.argv.includes('--headless')) {
 
-    const { values, positionals } = parseArgs({
-      options: {
-        headless: {
-          type: 'boolean'
+    let values;
+    try {
+      ({ values } = parseArgs({
+        args: process.argv.slice(2).filter(a => a !== '--'),
+        options: {
+          headless: { type: 'boolean' },
+          projectName: { type: 'string', default: 'my-cloudinary-app' },
+          cloudName: { type: 'string' },
+          hasUploadPreset: { type: 'boolean', default: false },
+          uploadPreset: { type: 'string' },
+          aiTools: { type: 'string', multiple: true, default: ['cursor'] },
+          installDeps: { type: 'boolean', default: true },
+          startDev: { type: 'boolean', default: false },
+          packageManager: { type: 'string' },
         },
-        projectName: {
-          type: 'string',
-          default: 'my-cloudinary-app'
-        },
-        cloudName: {
-          type: 'string'
-        },
-        hasUploadPreset: {
-          type: 'boolean',
-          default: false
-        },
-        uploadPreset: {
-          type: 'string'
-        },
-        aiTools: {
-          type: 'string',
-          multiple: true,
-          default: ['cursor']
-        },
-        installDeps: {
-          type: 'boolean',
-          default: true
-        },
-        startDev: {
-          type: 'boolean',
-          default: false
-        },
-        packageManager: {
-          type: 'string',
-        },
-      },
-      allowPositionals: true,
-    });
-    
+        allowPositionals: true,
+      }));
+    } catch (e) {
+      console.error(chalk.red(`Error: ${e.message}`));
+      process.exit(1);
+    }
+
     Object.assign(answers, values);
-    
+
+    const errors = [];
+
+    if (!isValidProjectName(values.projectName)) {
+      errors.push('--projectName can only contain letters, numbers, hyphens, and underscores');
+    } else if (existsSync(values.projectName)) {
+      errors.push(`Directory "${values.projectName}" already exists. Please choose a different name.`);
+    }
+
+    if (!values.cloudName) {
+      errors.push('--cloudName is required');
+    } else if (!isValidCloudName(values.cloudName)) {
+      errors.push('--cloudName can only contain lowercase letters, numbers, hyphens, and underscores');
+    }
+
+    if (values.hasUploadPreset && !values.uploadPreset) {
+      errors.push('--uploadPreset is required when --hasUploadPreset is set');
+    }
+
+    if (errors.length > 0) {
+      for (const err of errors) {
+        console.error(chalk.red(`Error: ${err}`));
+      }
+      process.exit(1);
+    }
+
   } else {
   
     console.log(chalk.cyan.bold('\n🚀 Cloudinary React Starter Kit\n'));
