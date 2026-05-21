@@ -63,15 +63,6 @@ jobs:
           git checkout -B main
           git branch --set-upstream-to=origin/main main
 
-      - name: Ensure master branch exists (for semantic-release validation)
-        run: |
-          # semantic-release requires at least one release branch that exists; repo uses main, we declare "master"
-          if ! git ls-remote --heads origin master 2>/dev/null | grep -q .; then
-            git checkout -b master
-            git push origin master
-            git checkout main
-          fi
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -87,14 +78,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add semantic-release note (dry run only)
-        if: github.event.inputs.dry_run == 'true'
-        run: |
-          set -e
-          if ! git rev-parse --verify v1.0.0-beta.1 >/dev/null 2>&1; then exit 0; fi
-          git notes --ref semantic-release-v1.0.0-beta.1 add -f -m '{"channels":["beta"]}' v1.0.0-beta.1
-          echo "Added semantic-release note to v1.0.0-beta.1 (local only for dry run)."
-
       - name: Dry run mode notice
         if: github.event.inputs.dry_run == 'true'
         run: |
@@ -104,18 +87,6 @@ jobs:
           echo "Semantic-release will show what WOULD happen."
           echo "To perform a real release, run again and uncheck 'Dry run only'."
           echo ""
-
-      - name: Ensure v1.0.0-beta.1 exists locally (dry run only)
-        if: github.event.inputs.dry_run == 'true'
-        run: |
-          if ! git rev-parse --verify "v1.0.0-beta.1" >/dev/null 2>&1; then
-            # So semantic-release sees a "previous release" and suggests 1.0.0-beta.2 for new commits
-            PARENT=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)
-            git tag -a "v1.0.0-beta.1" "$PARENT" -m "chore: initial beta release (dry-run placeholder)"
-            echo "Created local tag v1.0.0-beta.1 at $PARENT so semantic-release can compute next version (1.0.0-beta.2)."
-          else
-            echo "Tag v1.0.0-beta.1 already exists."
-          fi
 
       - name: Get version before semantic-release
         id: version-before

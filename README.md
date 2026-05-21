@@ -13,8 +13,6 @@ Scaffold a modern, production-ready Cloudinary application with React 19, Vite 6
   - [Sign up for free](https://cld.media/reactregister)
   - Your cloud name is in your [dashboard](https://console.cloudinary.com/app/home/dashboard)
 
-> **Beta Release** - This is a beta version. We welcome feedback and bug reports!
-
 Part of the [Cloudinary Developers](https://github.com/cloudinary-devs) organization.
 
 ![Build with Cloudinary!](https://res.cloudinary.com/cloudinary-creators-community/image/upload/c_thumb,w_200,g_face/v1771434800/Tee-Mascot-Hacktoberfest-cloudicorn_x6zvtf.png)
