@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { spawnSync, spawn } from 'child_process';
 import inquirer from 'inquirer';
@@ -354,12 +354,22 @@ async function main() {
   );
 
   let skillsInstalled = 0;
+  const failedSkills = [];
   for (const { skill, ok } of results) {
     if (ok) {
       console.log(chalk.gray(`   ✓ ${skill}`));
       skillsInstalled++;
     } else {
-      console.warn(chalk.yellow(`   ⚠ Could not install ${skill} (check your internet connection)`));
+      console.warn(chalk.yellow(`   ⚠ Could not install ${skill}`));
+      failedSkills.push(skill);
+    }
+  }
+
+  if (failedSkills.length > 0) {
+    const relDir = relative(projectPath, primaryDir);
+    console.log(chalk.yellow('\n   Some skills could not be installed. To install manually, run from your project directory:'));
+    for (const skill of failedSkills) {
+      console.log(chalk.cyan(`   npx degit cloudinary-devs/skills/skills/${skill} ${relDir}/${skill}`));
     }
   }
 
