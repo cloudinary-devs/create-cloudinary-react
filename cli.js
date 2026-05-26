@@ -415,7 +415,7 @@ async function main() {
     if (aiTools && aiTools.includes('claude')) console.log(chalk.gray('   • MCP (Claude Code): .mcp.json'));
     console.log(chalk.gray('\n   💡 How to use:'));
     console.log(chalk.gray('   • Open your project in your AI assistant — skills are picked up automatically'));
-    console.log(chalk.gray('   • Ask your AI to help build Cloudinary features, and it will follow these patterns'));
+    console.log(chalk.gray('   • Ask your AI assistant to help build Cloudinary features and it will use these skills'));
     console.log(chalk.gray('   • Example prompts: "Add image upload", "Create a transformation gallery"\n'));
   }
 
