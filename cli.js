@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { fileURLToPath } from 'url';
-import { dirname, join, relative } from 'path';
+import { dirname, join } from 'path';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { spawnSync, spawn } from 'child_process';
 import inquirer from 'inquirer';
@@ -353,23 +353,22 @@ async function main() {
     }))
   );
 
+  const BUNDLED_SKILLS_DIR = join(__dirname, 'skills');
+
   let skillsInstalled = 0;
-  const failedSkills = [];
   for (const { skill, ok } of results) {
     if (ok) {
       console.log(chalk.gray(`   ✓ ${skill}`));
       skillsInstalled++;
     } else {
-      console.warn(chalk.yellow(`   ⚠ Could not install ${skill}`));
-      failedSkills.push(skill);
-    }
-  }
-
-  if (failedSkills.length > 0) {
-    const relDir = relative(projectPath, primaryDir);
-    console.log(chalk.yellow('\n   Some skills could not be installed. To install manually, run from your project directory:'));
-    for (const skill of failedSkills) {
-      console.log(chalk.cyan(`   npx degit cloudinary-devs/skills/skills/${skill} ${relDir}/${skill}`));
+      const bundled = join(BUNDLED_SKILLS_DIR, skill);
+      if (existsSync(bundled)) {
+        fs.copySync(bundled, join(primaryDir, skill));
+        console.log(chalk.gray(`   ✓ ${skill} (installed from local cache)`));
+        skillsInstalled++;
+      } else {
+        console.warn(chalk.yellow(`   ⚠ Could not install ${skill}`));
+      }
     }
   }
 
