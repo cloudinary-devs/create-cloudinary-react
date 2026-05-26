@@ -409,7 +409,7 @@ async function main() {
   if (skillsInstalled > 0) {
     console.log(chalk.cyan(`\n📋 AI skills installed → .agents/skills/ (works with Cursor, Claude Code, Copilot, and more):`));
     console.log(chalk.gray('   • cloudinary-docs — looks up live Cloudinary documentation'));
-    console.log(chalk.gray('   • cloudinary-react — React SDK patterns and best practices'));
+    console.log(chalk.gray('   • cloudinary-react — uses React SDK patterns and best practices'));
     console.log(chalk.gray('   • cloudinary-transformations — describe image & video edits in plain English'));
     if (aiTools && aiTools.includes('cursor')) console.log(chalk.gray('   • MCP (Cursor): .cursor/mcp.json'));
     if (aiTools && aiTools.includes('claude')) console.log(chalk.gray('   • MCP (Claude Code): .mcp.json'));
