@@ -274,6 +274,9 @@ async function main() {
     UPLOAD_PRESET_ENV_LINE: uploadPreset
       ? `- \`VITE_CLOUDINARY_UPLOAD_PRESET\`: ${uploadPreset}`
       : '- `VITE_CLOUDINARY_UPLOAD_PRESET`: (not set - add one for uploads)',
+    UPLOAD_PRESET_DISPLAY: uploadPreset
+      ? `\`${uploadPreset}\``
+      : '(not configured — add `VITE_CLOUDINARY_UPLOAD_PRESET` to .env)',
   };
 
   // Function to copy template file
@@ -397,6 +400,51 @@ async function main() {
     }
   }
 
+  // Generate IDE-specific instruction files so common Cloudinary patterns are always
+  // in context without needing to invoke skills for every question.
+  if (aiTools && aiTools.length > 0) {
+    const aiContextTemplatePath = join(TEMPLATES_DIR, 'AI_CONTEXT.md.template');
+    if (existsSync(aiContextTemplatePath)) {
+      const rawContent = readFileSync(aiContextTemplatePath, 'utf-8');
+      const mdContent = replaceTemplate(rawContent, templateVars);
+
+      // Cursor: .cursor/rules/cloudinary.mdc (alwaysApply so it's always in context)
+      if (aiTools.includes('cursor')) {
+        const cursorRulesDir = join(projectPath, '.cursor', 'rules');
+        mkdirSync(cursorRulesDir, { recursive: true });
+        const mdcContent = `---\ndescription: Cloudinary React patterns and context for this project\nalwaysApply: true\n---\n\n${mdContent}`;
+        writeFileSync(join(cursorRulesDir, 'cloudinary.mdc'), mdcContent);
+      }
+
+      // Claude Code: CLAUDE.md
+      if (aiTools.includes('claude')) {
+        writeFileSync(join(projectPath, 'CLAUDE.md'), mdContent);
+      }
+
+      // GitHub Copilot: .github/copilot-instructions.md
+      if (aiTools.includes('copilot')) {
+        const githubDir = join(projectPath, '.github');
+        mkdirSync(githubDir, { recursive: true });
+        writeFileSync(join(githubDir, 'copilot-instructions.md'), mdContent);
+      }
+
+      // OpenAI Codex: AGENTS.md
+      if (aiTools.includes('codex')) {
+        writeFileSync(join(projectPath, 'AGENTS.md'), mdContent);
+      }
+
+      // Gemini CLI: GEMINI.md
+      if (aiTools.includes('gemini')) {
+        writeFileSync(join(projectPath, 'GEMINI.md'), mdContent);
+      }
+
+      // Generic / Other: AGENTS.md (broadly supported fallback)
+      if (aiTools.includes('generic')) {
+        writeFileSync(join(projectPath, 'AGENTS.md'), mdContent);
+      }
+    }
+  }
+
   // Copy vite.svg to public directory
   const viteSvgPath = join(projectPath, 'public', 'vite.svg');
   mkdirSync(join(projectPath, 'public'), { recursive: true });
@@ -413,8 +461,9 @@ async function main() {
     if (aiTools && aiTools.includes('cursor')) console.log(chalk.gray('   • MCP (Cursor): .cursor/mcp.json'));
     if (aiTools && aiTools.includes('claude')) console.log(chalk.gray('   • MCP (Claude Code): .mcp.json'));
     console.log(chalk.gray('\n   💡 How to use:'));
-    console.log(chalk.gray('   • Open your project in your AI assistant — skills are picked up automatically'));
-    console.log(chalk.gray('   • Ask your AI assistant to help build Cloudinary features and it will use these skills'));
+    console.log(chalk.gray('   • Open your project in your AI assistant — skills and context files are picked up automatically'));
+    console.log(chalk.gray('   • Common patterns are pre-loaded in your IDE\'s context file for fast responses'));
+    console.log(chalk.gray('   • Skills are invoked only for detailed API lookups and complex transformations'));
     console.log(chalk.gray('   • Example prompts: "Add image upload", "Create a transformation gallery"\n'));
   }
 

@@ -1,0 +1,99 @@
+# Cloudinary React — AI Context
+
+This project uses **Vite + React + TypeScript** with the Cloudinary React SDK, scaffolded by [create-cloudinary-react](https://github.com/cloudinary-devs/create-cloudinary-react).
+
+**Cloud name:** `{{CLOUD_NAME}}`
+**Upload preset:** {{UPLOAD_PRESET_DISPLAY}}
+
+---
+
+## When to use Cloudinary skills
+
+Check this file first. Only invoke a skill when the answer is not here:
+
+| Question type | Use |
+|---------------|-----|
+| Common patterns, imports, config, errors | This file |
+| Transformation URL (common cases) | Quick reference below |
+| Complete Upload Widget config options | `cloudinary-docs` skill |
+| Video Player API / full method list | `cloudinary-docs` skill |
+| Webhooks, account settings, DAM | `cloudinary-docs` skill |
+| Complex or chained transformation URLs | `cloudinary-transformations` skill |
+| Errors or patterns not covered here | `cloudinary-react` skill |
+
+---
+
+## Config
+
+`src/cloudinary/config.ts` exports a shared `cld` instance and `uploadPreset`:
+
+```ts
+import { Cloudinary } from '@cloudinary/url-gen';
+export const cld = new Cloudinary({ cloud: { cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME } });
+export const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+```
+
+- Env vars require the `VITE_` prefix; read with `import.meta.env.VITE_*`. Restart the dev server after changing `.env`.
+- Never use the literal string `your_cloud_name` — it causes 401 errors.
+
+---
+
+## Display image / video
+
+```tsx
+import { AdvancedImage, AdvancedVideo } from '@cloudinary/react';
+import { fill } from '@cloudinary/url-gen/actions/resize';
+import { format, quality } from '@cloudinary/url-gen/actions/delivery';
+import { auto } from '@cloudinary/url-gen/qualifiers/format';
+import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality';
+
+const img = cld.image('samples/cloudinary-icon')
+  .resize(fill().width(800).height(600))
+  .delivery(format(auto()))
+  .delivery(quality(autoQuality()));
+
+<AdvancedImage cldImg={img} />
+
+// Video (same pattern)
+<AdvancedVideo cldVid={cld.video('samples/elephants')} controls />
+```
+
+`format` and `quality` must be **separate** `.delivery()` calls. Always add both at the end unless a specific format/quality is needed.
+
+---
+
+## Upload Widget
+
+1. Add to `index.html`: `<script src="https://upload-widget.cloudinary.com/global/all.js" async></script>`
+2. In `useEffect`, **poll** with `setInterval` until `typeof window.cloudinary?.createUploadWidget === 'function'`
+3. Create the widget once, store in a ref, add a ~10s timeout to handle load failures
+4. Call `widgetRef.current?.open()` on button click
+
+Do **not** check only `window.cloudinary` — `createUploadWidget` may not be attached yet when `cloudinary` appears.
+
+---
+
+## Key import paths (`@cloudinary/url-gen` — use exactly, do not guess subpaths)
+
+| Purpose | Import |
+|---------|--------|
+| Resize fill | `import { fill } from '@cloudinary/url-gen/actions/resize'` |
+| Resize scale | `import { scale } from '@cloudinary/url-gen/actions/resize'` |
+| Delivery format / quality | `import { format, quality } from '@cloudinary/url-gen/actions/delivery'` |
+| Format auto | `import { auto } from '@cloudinary/url-gen/qualifiers/format'` |
+| Quality auto | `import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality'` |
+| Overlay source | `import { source } from '@cloudinary/url-gen/actions/overlay'` |
+| Overlay text / image | `import { text, image } from '@cloudinary/url-gen/qualifiers/source'` |
+| Position | `import { Position } from '@cloudinary/url-gen/qualifiers/position'` |
+| Gravity compass | `import { compass } from '@cloudinary/url-gen/qualifiers/gravity'` |
+| TextStyle | `import { TextStyle } from '@cloudinary/url-gen/qualifiers/textStyle'` |
+
+Components (`AdvancedImage`, `AdvancedVideo`, plugins) come from `@cloudinary/react`, not `@cloudinary/url-gen`.
+
+---
+
+## Transformation quick reference
+
+URL structure: `https://res.cloudinary.com/{{CLOUD_NAME}}/image/upload/<transforms>/<public_id>`
+
+Always end with `f_auto/q_auto` as the final URL components. Commas separate params within a step; slashes separate steps.
