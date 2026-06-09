@@ -1,0 +1,121 @@
+# Cloudinary React — AI Context
+
+This project uses **Vite + React + TypeScript** with the Cloudinary React SDK, scaffolded by [create-cloudinary-react](https://github.com/cloudinary-devs/create-cloudinary-react).
+
+**Cloud name:** `{{CLOUD_NAME}}`
+**Upload preset:** {{UPLOAD_PRESET_DISPLAY}}
+
+---
+
+## When to use Cloudinary skills
+
+Check this file first. Only invoke a skill when the answer is not here:
+
+| Question type | Use |
+|---------------|-----|
+| Common patterns, imports, config, errors | This file |
+| Transformation URL (common cases) | Quick reference below |
+| Complete Upload Widget config options | `cloudinary-docs` skill |
+| Video Player API / full method list | `cloudinary-docs` skill |
+| Webhooks, account settings, DAM | `cloudinary-docs` skill |
+| Complex or chained transformation URLs | `cloudinary-transformations` skill |
+| Errors or patterns not covered here | `cloudinary-react` skill |
+
+---
+
+## Config
+
+`src/cloudinary/config.ts` exports a shared `cld` instance and `uploadPreset`:
+
+```ts
+import { Cloudinary } from '@cloudinary/url-gen';
+export const cld = new Cloudinary({ cloud: { cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME } });
+export const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+```
+
+- Env vars require the `VITE_` prefix; read with `import.meta.env.VITE_*`. Restart the dev server after changing `.env`.
+- Never use the literal string `your_cloud_name` — it causes 401 errors.
+
+---
+
+## Display image / video
+
+```tsx
+import { AdvancedImage, AdvancedVideo } from '@cloudinary/react';
+import { fill } from '@cloudinary/url-gen/actions/resize';
+import { format, quality } from '@cloudinary/url-gen/actions/delivery';
+import { auto } from '@cloudinary/url-gen/qualifiers/format';
+import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality';
+
+const img = cld.image('samples/cloudinary-icon')
+  .resize(fill().width(800).height(600))
+  .delivery(format(auto()))
+  .delivery(quality(autoQuality()));
+
+<AdvancedImage cldImg={img} />
+
+// Video (same pattern)
+<AdvancedVideo cldVid={cld.video('samples/elephants')} controls />
+```
+
+`format` and `quality` must be **separate** `.delivery()` calls. Always add both at the end unless a specific format/quality is needed.
+
+---
+
+## Upload Widget
+
+1. Add to `index.html`: `<script src="https://upload-widget.cloudinary.com/global/all.js" async></script>`
+2. In `useEffect`, **poll** with `setInterval` until `typeof window.cloudinary?.createUploadWidget === 'function'`
+3. Create the widget once, store in a ref, add a ~10s timeout to handle load failures
+4. Call `widgetRef.current?.open()` on button click
+
+Do **not** check only `window.cloudinary` — `createUploadWidget` may not be attached yet when `cloudinary` appears.
+
+---
+
+## Key import paths (`@cloudinary/url-gen` — use exactly, do not guess subpaths)
+
+| Purpose | Import |
+|---------|--------|
+| Resize fill | `import { fill } from '@cloudinary/url-gen/actions/resize'` |
+| Resize scale | `import { scale } from '@cloudinary/url-gen/actions/resize'` |
+| Delivery format / quality | `import { format, quality } from '@cloudinary/url-gen/actions/delivery'` |
+| Format auto | `import { auto } from '@cloudinary/url-gen/qualifiers/format'` |
+| Quality auto | `import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality'` |
+| Overlay source | `import { source } from '@cloudinary/url-gen/actions/overlay'` |
+| Overlay text / image | `import { text, image } from '@cloudinary/url-gen/qualifiers/source'` |
+| Position | `import { Position } from '@cloudinary/url-gen/qualifiers/position'` |
+| Gravity compass | `import { compass } from '@cloudinary/url-gen/qualifiers/gravity'` |
+| TextStyle | `import { TextStyle } from '@cloudinary/url-gen/qualifiers/textStyle'` |
+
+Components (`AdvancedImage`, `AdvancedVideo`, plugins) come from `@cloudinary/react`, not `@cloudinary/url-gen`.
+
+---
+
+## Transformation quick reference
+
+Use SDK methods — not URL strings. Raw URL syntax (`c_fill`, `e_blur`, etc.) only belongs inside `addTransformation()`.
+
+```tsx
+// Resize to exact dimensions (smart crop)
+cld.image('id').resize(fill().width(800).height(600))
+
+// Resize by one dimension (preserves aspect ratio)
+cld.image('id').resize(scale().width(400))
+
+// Apply an effect
+cld.image('id').effect(blur(800))
+
+// Always end with format + quality (separate .delivery() calls)
+.delivery(format(auto())).delivery(quality(autoQuality()))
+
+// Raw URL escape hatch — for params the SDK doesn't expose directly
+cld.image('id').addTransformation('e_background_removal')
+```
+
+**Import path gotcha** — wrong subpaths are the #1 source of "module not found" errors. Use the **Key import paths** table above exactly:
+- `text`, `image` → `@cloudinary/url-gen/qualifiers/source` (**not** `actions/overlay`)
+- `Position` → `@cloudinary/url-gen/qualifiers/position` (**not** `positioning/Position`)
+- `AdvancedImage`, `AdvancedVideo`, plugins → `@cloudinary/react` (**not** `@cloudinary/url-gen`)
+
+For overlays, use the canonical block in the `cloudinary-react` skill — do not derive paths.

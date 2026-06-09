@@ -3,7 +3,7 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
-import { spawnSync } from 'child_process';
+import { spawnSync, spawn } from 'child_process';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import fs from 'fs-extra';
@@ -208,12 +208,14 @@ async function main() {
         name: 'aiTools',
         message:
           'Which AI coding assistant(s) are you using? (Select all that apply)\n' +
-          chalk.gray('   We’ll add local instruction files so your assistant knows Cloudinary patterns.\n'),
+          chalk.gray('   We\'ll install Cloudinary skills in the right location for each tool.\n'),
         choices: [
           { name: 'Cursor', value: 'cursor' },
-          { name: 'GitHub Copilot', value: 'copilot' },
           { name: 'Claude Code', value: 'claude' },
-          { name: 'Other / Generic AI tools', value: 'generic' },
+          { name: 'GitHub Copilot', value: 'copilot' },
+          { name: 'OpenAI Codex', value: 'codex' },
+          { name: 'Gemini CLI', value: 'gemini' },
+          { name: 'Other', value: 'generic' },
         ],
         default: ['cursor'],
       },
@@ -272,6 +274,9 @@ async function main() {
     UPLOAD_PRESET_ENV_LINE: uploadPreset
       ? `- \`VITE_CLOUDINARY_UPLOAD_PRESET\`: ${uploadPreset}`
       : '- `VITE_CLOUDINARY_UPLOAD_PRESET`: (not set - add one for uploads)',
+    UPLOAD_PRESET_DISPLAY: uploadPreset
+      ? `\`${uploadPreset}\``
+      : '(not configured — add `VITE_CLOUDINARY_UPLOAD_PRESET` to .env)',
   };
 
   // Function to copy template file
@@ -316,35 +321,68 @@ async function main() {
     copyTemplate(file);
   });
 
-  // Create AI rules based on user's tool selection
-  const aiRulesTemplatePath = join(TEMPLATES_DIR, '.cursorrules.template');
-  if (existsSync(aiRulesTemplatePath) && aiTools && aiTools.length > 0) {
-    const aiRulesContent = replaceTemplate(
-      readFileSync(aiRulesTemplatePath, 'utf-8'),
-      templateVars
-    );
+  // Install Cloudinary skills into the directories each selected tool actually reads:
+  // .cursor/skills/  = Cursor
+  // .claude/skills/  = Claude Code
+  // .agents/skills/  = Copilot, Codex, Gemini, Generic (and any unrecognised tool)
+  console.log(chalk.blue('\n🤖 Installing Cloudinary AI skills...\n'));
 
-    // Generate files based on selected tools
-    if (aiTools.includes('cursor')) {
-      writeFileSync(join(projectPath, '.cursorrules'), aiRulesContent);
+  const skillTargetDirs = new Set();
+  if (aiTools && aiTools.includes('cursor')) skillTargetDirs.add(join(projectPath, '.cursor', 'skills'));
+  if (aiTools && aiTools.includes('claude')) skillTargetDirs.add(join(projectPath, '.claude', 'skills'));
+  if (!aiTools || aiTools.some(t => !['cursor', 'claude'].includes(t))) {
+    skillTargetDirs.add(join(projectPath, '.agents', 'skills'));
+  }
+
+  const skills = ['cloudinary-docs', 'cloudinary-react', 'cloudinary-transformations'];
+  // Download each skill once then copy to any additional targets
+  const [primaryDir, ...additionalDirs] = skillTargetDirs;
+  mkdirSync(primaryDir, { recursive: true });
+
+  // Print all skill names upfront so the user sees activity immediately
+  for (const skill of skills) {
+    console.log(chalk.gray(`   Fetching ${skill}...`));
+  }
+
+  // Download all 3 skills in parallel
+  const results = await Promise.all(
+    skills.map(skill => new Promise(resolve => {
+      const proc = spawn(
+        'npx',
+        ['--yes', 'degit', `cloudinary-devs/skills/skills/${skill}`, join(primaryDir, skill)],
+        { stdio: 'pipe', shell: false }
+      );
+      proc.on('close', code => resolve({ skill, ok: code === 0 }));
+    }))
+  );
+
+  const BUNDLED_SKILLS_DIR = join(__dirname, 'skills');
+
+  let skillsInstalled = 0;
+  for (const { skill, ok } of results) {
+    if (ok) {
+      console.log(chalk.gray(`   ✓ ${skill}`));
+      skillsInstalled++;
+    } else {
+      const bundled = join(BUNDLED_SKILLS_DIR, skill);
+      if (existsSync(bundled)) {
+        fs.copySync(bundled, join(primaryDir, skill));
+        console.log(chalk.gray(`   ✓ ${skill} (installed from local cache)`));
+        skillsInstalled++;
+      } else {
+        console.warn(chalk.yellow(`   ⚠ Could not install ${skill}`));
+      }
     }
+  }
 
-    if (aiTools.includes('copilot')) {
-      const githubDir = join(projectPath, '.github');
-      mkdirSync(githubDir, { recursive: true });
-      writeFileSync(join(githubDir, 'copilot-instructions.md'), aiRulesContent);
+  if (skillsInstalled > 0) {
+    for (const target of additionalDirs) {
+      fs.copySync(primaryDir, target);
     }
+  }
 
-    if (aiTools.includes('claude')) {
-      writeFileSync(join(projectPath, 'CLAUDE.md'), aiRulesContent);
-    }
-
-    if (aiTools.includes('generic')) {
-      writeFileSync(join(projectPath, 'AI_INSTRUCTIONS.md'), aiRulesContent);
-      writeFileSync(join(projectPath, 'PROMPT.md'), aiRulesContent);
-    }
-
-    // Generate MCP configuration: Cursor uses .cursor/mcp.json, Claude Code uses .mcp.json in project root
+  // Generate MCP configuration: Cursor uses .cursor/mcp.json, Claude Code uses .mcp.json in project root
+  if (aiTools && aiTools.length > 0) {
     const mcpTemplatePath = join(TEMPLATES_DIR, '.cursor/mcp.json.template');
     if (existsSync(mcpTemplatePath)) {
       const mcpContent = replaceTemplate(
@@ -362,6 +400,51 @@ async function main() {
     }
   }
 
+  // Generate IDE-specific instruction files so common Cloudinary patterns are always
+  // in context without needing to invoke skills for every question.
+  if (aiTools && aiTools.length > 0) {
+    const aiContextTemplatePath = join(TEMPLATES_DIR, 'AI_CONTEXT.md.template');
+    if (existsSync(aiContextTemplatePath)) {
+      const rawContent = readFileSync(aiContextTemplatePath, 'utf-8');
+      const mdContent = replaceTemplate(rawContent, templateVars);
+
+      // Cursor: .cursor/rules/cloudinary.mdc (alwaysApply so it's always in context)
+      if (aiTools.includes('cursor')) {
+        const cursorRulesDir = join(projectPath, '.cursor', 'rules');
+        mkdirSync(cursorRulesDir, { recursive: true });
+        const mdcContent = `---\ndescription: Cloudinary React patterns and context for this project\nalwaysApply: true\n---\n\n${mdContent}`;
+        writeFileSync(join(cursorRulesDir, 'cloudinary.mdc'), mdcContent);
+      }
+
+      // Claude Code: CLAUDE.md
+      if (aiTools.includes('claude')) {
+        writeFileSync(join(projectPath, 'CLAUDE.md'), mdContent);
+      }
+
+      // GitHub Copilot: .github/copilot-instructions.md
+      if (aiTools.includes('copilot')) {
+        const githubDir = join(projectPath, '.github');
+        mkdirSync(githubDir, { recursive: true });
+        writeFileSync(join(githubDir, 'copilot-instructions.md'), mdContent);
+      }
+
+      // OpenAI Codex: AGENTS.md
+      if (aiTools.includes('codex')) {
+        writeFileSync(join(projectPath, 'AGENTS.md'), mdContent);
+      }
+
+      // Gemini CLI: GEMINI.md
+      if (aiTools.includes('gemini')) {
+        writeFileSync(join(projectPath, 'GEMINI.md'), mdContent);
+      }
+
+      // Generic / Other: AGENTS.md (broadly supported fallback)
+      if (aiTools.includes('generic')) {
+        writeFileSync(join(projectPath, 'AGENTS.md'), mdContent);
+      }
+    }
+  }
+
   // Copy vite.svg to public directory
   const viteSvgPath = join(projectPath, 'public', 'vite.svg');
   mkdirSync(join(projectPath, 'public'), { recursive: true });
@@ -370,26 +453,17 @@ async function main() {
 
   console.log(chalk.green('✅ Project created successfully!\n'));
 
-  if (aiTools && aiTools.length > 0) {
-    // Count actual files created
-    let fileCount = 0;
-    if (aiTools.includes('cursor')) fileCount += 2; // .cursorrules + mcp.json
-    if (aiTools.includes('copilot')) fileCount += 1;
-    if (aiTools.includes('claude')) fileCount += 2; // CLAUDE.md + .mcp.json
-    if (aiTools.includes('generic')) fileCount += 2; // AI_INSTRUCTIONS.md + PROMPT.md
-    
-    const filesText = fileCount === 1 ? 'file' : 'files';
-    console.log(chalk.cyan(`📋 AI assistant configuration ${filesText} created:`));
-    if (aiTools.includes('cursor')) console.log(chalk.gray('   • Cursor: .cursorrules'));
-    if (aiTools.includes('copilot')) console.log(chalk.gray('   • GitHub Copilot: .github/copilot-instructions.md'));
-    if (aiTools.includes('claude')) console.log(chalk.gray('   • Claude: CLAUDE.md'));
-    if (aiTools.includes('generic')) console.log(chalk.gray('   • Generic: AI_INSTRUCTIONS.md, PROMPT.md'));
-    if (aiTools.includes('cursor')) console.log(chalk.gray('   • MCP (Cursor): .cursor/mcp.json'));
-    if (aiTools.includes('claude')) console.log(chalk.gray('   • MCP (Claude Code): .mcp.json'));
-    console.log(chalk.gray(`\n   ${fileCount === 1 ? 'This file teaches' : 'These files teach'} your AI assistant about Cloudinary patterns and best practices.`));
-    console.log(chalk.gray(`\n   💡 How to use ${fileCount === 1 ? 'this file' : 'these files'}:`));
-    console.log(chalk.gray('   • Simply open your project in your AI assistant - the configuration is already loaded'));
-    console.log(chalk.gray('   • Ask your AI to help build Cloudinary features, and it will follow these patterns'));
+  if (skillsInstalled > 0) {
+    console.log(chalk.cyan(`\n📋 AI skills installed → .agents/skills/ (works with Cursor, Claude Code, Copilot, and more):`));
+    console.log(chalk.gray('   • cloudinary-docs — looks up live Cloudinary documentation'));
+    console.log(chalk.gray('   • cloudinary-react — uses React SDK patterns and best practices'));
+    console.log(chalk.gray('   • cloudinary-transformations — creates and debugs Cloudinary transformation URLs from natural language instructions'));
+    if (aiTools && aiTools.includes('cursor')) console.log(chalk.gray('   • MCP (Cursor): .cursor/mcp.json'));
+    if (aiTools && aiTools.includes('claude')) console.log(chalk.gray('   • MCP (Claude Code): .mcp.json'));
+    console.log(chalk.gray('\n   💡 How to use:'));
+    console.log(chalk.gray('   • Open your project in your AI assistant — skills and context files are picked up automatically'));
+    console.log(chalk.gray('   • Common patterns are pre-loaded in your IDE\'s context file for fast responses'));
+    console.log(chalk.gray('   • Skills are invoked only for detailed API lookups and complex transformations'));
     console.log(chalk.gray('   • Example prompts: "Add image upload", "Create a transformation gallery"\n'));
   }
 
