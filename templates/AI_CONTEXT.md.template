@@ -94,6 +94,28 @@ Components (`AdvancedImage`, `AdvancedVideo`, plugins) come from `@cloudinary/re
 
 ## Transformation quick reference
 
-URL structure: `https://res.cloudinary.com/{{CLOUD_NAME}}/image/upload/<transforms>/<public_id>`
+Use SDK methods — not URL strings. Raw URL syntax (`c_fill`, `e_blur`, etc.) only belongs inside `addTransformation()`.
 
-Always end with `f_auto/q_auto` as the final URL components. Commas separate params within a step; slashes separate steps.
+```tsx
+// Resize to exact dimensions (smart crop)
+cld.image('id').resize(fill().width(800).height(600))
+
+// Resize by one dimension (preserves aspect ratio)
+cld.image('id').resize(scale().width(400))
+
+// Apply an effect
+cld.image('id').effect(blur(800))
+
+// Always end with format + quality (separate .delivery() calls)
+.delivery(format(auto())).delivery(quality(autoQuality()))
+
+// Raw URL escape hatch — for params the SDK doesn't expose directly
+cld.image('id').addTransformation('e_background_removal')
+```
+
+**Import path gotcha** — wrong subpaths are the #1 source of "module not found" errors. Use the **Key import paths** table above exactly:
+- `text`, `image` → `@cloudinary/url-gen/qualifiers/source` (**not** `actions/overlay`)
+- `Position` → `@cloudinary/url-gen/qualifiers/position` (**not** `positioning/Position`)
+- `AdvancedImage`, `AdvancedVideo`, plugins → `@cloudinary/react` (**not** `@cloudinary/url-gen`)
+
+For overlays, use the canonical block in the `cloudinary-react` skill — do not derive paths.
